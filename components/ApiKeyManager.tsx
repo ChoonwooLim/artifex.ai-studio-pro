@@ -20,43 +20,43 @@ const API_SERVICES: ApiKeyConfig[] = [
     {
         service: 'OpenAI',
         key: 'openai',
-        models: ['GPT-5', 'GPT-5 Pro', 'GPT Image 1', 'Sora Turbo'],
+        models: ['GPT-4o', 'GPT-4o mini', 'o1-preview', 'DALL-E 3', 'Sora Turbo'],
         docsUrl: 'https://platform.openai.com/docs',
         signupUrl: 'https://platform.openai.com/api-keys',
         pricingUrl: 'https://openai.com/pricing',
-        description: 'Access GPT-5 (Aug 2025), GPT Image 1, and Sora Turbo video'
+        description: 'Access GPT-4o, o1 reasoning models, DALL-E 3, and Sora video'
     },
     {
         service: 'Anthropic (Claude)',
         key: 'anthropic',
-        models: ['Claude Opus 4.1', 'Claude Sonnet 4', 'Claude 3.7'],
+        models: ['Claude 3.5 Sonnet', 'Claude 3.5 Haiku', 'Claude 3 Opus'],
         docsUrl: 'https://docs.anthropic.com',
         signupUrl: 'https://console.anthropic.com/account/keys',
         pricingUrl: 'https://www.anthropic.com/pricing',
-        description: 'Access Claude 4 series with 1M token context'
+        description: 'Access Claude 3.5 series with enhanced intelligence (Oct 2024)'
     },
     {
         service: 'Google AI (Gemini)',
         key: 'google',
-        models: ['Gemini 2.5 Deep Think', 'Gemini 2.5 Pro', 'Veo 3', 'Veo 3 Fast'],
+        models: ['Gemini 2.0 Flash', 'Gemini 1.5 Pro', 'Imagen 3', 'Veo 2'],
         docsUrl: 'https://ai.google.dev/docs',
         signupUrl: 'https://aistudio.google.com/app/apikey',
         pricingUrl: 'https://ai.google.dev/pricing',
-        description: 'Access Gemini 2.5 and Veo 3 with native audio (Sep 2025)'
+        description: 'Access Gemini 2.0 and Veo 2 with 4K video generation (Dec 2024)'
     },
     {
         service: 'xAI (Grok)',
         key: 'xai',
-        models: ['Grok 3', 'Grok 3 Mini', 'Grok 4 (Coming)'],
+        models: ['Grok 2', 'Grok 2 Vision'],
         docsUrl: 'https://docs.x.ai',
         signupUrl: 'https://x.ai/api',
         pricingUrl: 'https://x.ai/pricing',
-        description: 'Access Grok 3 with 1M token context (Feb 2025)'
+        description: 'Access Grok 2 with real-time X platform knowledge'
     },
     {
         service: 'Stability AI',
         key: 'stability',
-        models: ['SD 3.5 Large', 'SD 3.5 Turbo', 'Stable Video Diffusion'],
+        models: ['SD 3.5 Large', 'SD 3.5 Turbo', 'Stable Video 2.1'],
         docsUrl: 'https://platform.stability.ai/docs',
         signupUrl: 'https://platform.stability.ai/account/keys',
         pricingUrl: 'https://platform.stability.ai/pricing',
@@ -65,34 +65,34 @@ const API_SERVICES: ApiKeyConfig[] = [
     {
         service: 'Midjourney',
         key: 'midjourney',
-        models: ['Midjourney v7', 'v7 Video (20 sec)'],
+        models: ['Midjourney v6.1'],
         docsUrl: 'https://docs.midjourney.com',
         signupUrl: 'https://www.midjourney.com/account',
         pricingUrl: 'https://www.midjourney.com/pricing',
-        description: 'Top realism & video generation (Apr 2025)'
+        description: 'Artistic image generation with improved coherence (Jul 2024)'
     },
     {
         service: 'Runway',
         key: 'runway',
-        models: ['Runway Gen-3 Alpha'],
+        models: ['Gen-3 Alpha Turbo'],
         docsUrl: 'https://docs.runwayml.com',
         signupUrl: 'https://app.runwayml.com/settings/apikeys',
         pricingUrl: 'https://runwayml.com/pricing',
-        description: 'Professional video generation and editing'
+        description: 'Professional video generation and editing (Oct 2024)'
     },
     {
         service: 'Pika Labs',
         key: 'pika',
-        models: ['Pika 1.0'],
+        models: ['Pika 2.0'],
         docsUrl: 'https://docs.pika.art',
         signupUrl: 'https://pika.art/login',
         pricingUrl: 'https://pika.art/pricing',
-        description: 'Creative video generation platform'
+        description: 'Advanced cinematic effects and scene editing (Dec 2024)'
     },
     {
         service: 'Luma AI',
         key: 'luma',
-        models: ['Dream Machine'],
+        models: ['Dream Machine 1.5'],
         docsUrl: 'https://docs.lumalabs.ai',
         signupUrl: 'https://lumalabs.ai/dream-machine/api',
         pricingUrl: 'https://lumalabs.ai/dream-machine/pricing',
@@ -110,19 +110,73 @@ const API_SERVICES: ApiKeyConfig[] = [
     {
         service: 'Meta (LLaMA)',
         key: 'meta',
-        models: ['LLaMA 4 Maverick', 'LLaMA 4 Scout', 'LLaMA 3.2 90B'],
+        models: ['Llama 3.2 90B', 'Llama 3.1 405B'],
         docsUrl: 'https://ai.meta.com/llama/',
         signupUrl: 'https://ai.meta.com/resources/models-and-libraries/',
-        description: 'LLaMA 4 with 1M token context (Apr 2025)'
+        description: 'Open-source models with vision capabilities (Sep 2024)'
     },
     {
         service: 'Mistral AI',
         key: 'mistral',
-        models: ['Mistral Large 2', 'Mistral Medium'],
+        models: ['Mistral Large 2', 'Mixtral 8x22B'],
         docsUrl: 'https://docs.mistral.ai',
         signupUrl: 'https://console.mistral.ai/api-keys',
         pricingUrl: 'https://mistral.ai/pricing',
-        description: 'Mistral Large 2 with 123B params, 128k context'
+        description: '123B parameters with 128k context window (Jul 2024)'
+    },
+    {
+        service: 'Black Forest Labs (FLUX)',
+        key: 'flux',
+        models: ['FLUX 1.1 Pro', 'FLUX Dev', 'FLUX Schnell'],
+        docsUrl: 'https://blackforestlabs.ai/docs',
+        signupUrl: 'https://replicate.com/black-forest-labs',
+        pricingUrl: 'https://blackforestlabs.ai/#pricing',
+        description: 'State-of-the-art image generation from SD creators (Oct 2024)'
+    },
+    {
+        service: 'Cohere',
+        key: 'cohere',
+        models: ['Command R+', 'Embed v3', 'Rerank v3'],
+        docsUrl: 'https://docs.cohere.com',
+        signupUrl: 'https://dashboard.cohere.com/api-keys',
+        pricingUrl: 'https://cohere.com/pricing',
+        description: 'Enterprise AI optimized for RAG and search'
+    },
+    {
+        service: 'Replicate',
+        key: 'replicate',
+        models: ['FLUX', 'SDXL', 'Various open models'],
+        docsUrl: 'https://replicate.com/docs',
+        signupUrl: 'https://replicate.com/account/api-tokens',
+        pricingUrl: 'https://replicate.com/pricing',
+        description: 'Run thousands of open-source models in the cloud'
+    },
+    {
+        service: 'Hugging Face',
+        key: 'huggingface',
+        models: ['Qwen 2.5', 'DeepSeek V3', 'Open models'],
+        docsUrl: 'https://huggingface.co/docs',
+        signupUrl: 'https://huggingface.co/settings/tokens',
+        pricingUrl: 'https://huggingface.co/pricing',
+        description: 'Hub for open-source AI models and datasets'
+    },
+    {
+        service: 'Ideogram',
+        key: 'ideogram',
+        models: ['Ideogram 2.0'],
+        docsUrl: 'https://ideogram.ai/api',
+        signupUrl: 'https://ideogram.ai/settings',
+        pricingUrl: 'https://ideogram.ai/pricing',
+        description: 'Best-in-class text rendering in images (Aug 2024)'
+    },
+    {
+        service: 'Leonardo AI',
+        key: 'leonardo',
+        models: ['Leonardo Phoenix', 'Leonardo Kino'],
+        docsUrl: 'https://docs.leonardo.ai',
+        signupUrl: 'https://app.leonardo.ai/settings',
+        pricingUrl: 'https://leonardo.ai/pricing',
+        description: 'AI art generation for creative professionals'
     }
 ];
 
@@ -150,7 +204,12 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isOpen, onClose }) => {
             'luma': import.meta.env.VITE_LUMA_API_KEY || '',
             'adobe': import.meta.env.VITE_ADOBE_API_KEY || '',
             'meta': import.meta.env.VITE_META_API_KEY || '',
-            'mistral': import.meta.env.VITE_MISTRAL_API_KEY || ''
+            'mistral': import.meta.env.VITE_MISTRAL_API_KEY || '',
+            'flux': import.meta.env.VITE_FLUX_API_KEY || '',
+            'cohere': import.meta.env.VITE_COHERE_API_KEY || '',
+            'huggingface': import.meta.env.VITE_HUGGINGFACE_API_KEY || '',
+            'ideogram': import.meta.env.VITE_IDEOGRAM_API_KEY || '',
+            'leonardo': import.meta.env.VITE_LEONARDO_API_KEY || ''
         };
         
         API_SERVICES.forEach(service => {
