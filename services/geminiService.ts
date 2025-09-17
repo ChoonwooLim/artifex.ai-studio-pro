@@ -48,6 +48,18 @@ const safeJsonParse = (jsonString: string) => {
     }
 };
 
+// Helper function to get compatible Gemini model
+const getGeminiCompatibleModel = (model: string): string => {
+    // Only Gemini models are supported by Google AI API
+    const geminiModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-pro', 'gemini-2.5-deep-think'];
+    if (geminiModels.some(m => model.toLowerCase().includes(m))) {
+        return model;
+    }
+    // Fallback to gemini-2.5-flash for non-Gemini models
+    console.log(`Model ${model} is not supported by Gemini API. Using gemini-2.5-flash instead.`);
+    return 'gemini-2.5-flash';
+};
+
 export const generateDescription = async (config: DescriptionConfig): Promise<string> => {
     const prompt = `Generate a compelling product description.
     - Product Name: ${config.productName}
@@ -58,10 +70,11 @@ export const generateDescription = async (config: DescriptionConfig): Promise<st
     
     The description should be concise, engaging, and highlight the key benefits for the target audience. Do not include a title or header.`;
     
-    // Corrected: Use ai.models.generateContent as per guidelines
-    // Now using the selected text model from config
+    // Use compatible Gemini model
+    const modelToUse = getGeminiCompatibleModel(config.textModel || 'gemini-2.5-flash');
+    
     const response = await ai.models.generateContent({
-        model: config.textModel || 'gemini-2.5-flash',
+        model: modelToUse,
         contents: prompt,
     });
     // Corrected: Access text directly from response.text property
@@ -89,9 +102,12 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
     
     Return the result as a JSON array of objects.`;
 
+    // Use compatible Gemini model
+    const modelToUse = getGeminiCompatibleModel(config.textModel || 'gemini-2.5-flash');
+    
     // Corrected: Use ai.models.generateContent with responseSchema for JSON output
     const response = await ai.models.generateContent({
-        model: config.textModel,
+        model: modelToUse,
         contents: prompt,
         config: {
             responseMimeType: "application/json",
@@ -146,13 +162,36 @@ export const generateDetailedStoryboard = async (originalScene: string, language
     return parsed.map(p => ({ description: p.description }));
 };
 
+// Helper function to get compatible image model
+const getGeminiCompatibleImageModel = (model: string): string => {
+    // Only Imagen models are supported by Google AI API
+    if (model.toLowerCase().includes('imagen')) {
+        return model;
+    }
+    console.log(`Image model ${model} is not supported by Gemini API. Using imagen-4.0-generate-001 instead.`);
+    return 'imagen-4.0-generate-001';
+};
+
+// Helper function to get compatible video model
+const getGeminiCompatibleVideoModel = (model: string): string => {
+    // Only Veo models are supported by Google AI API
+    if (model.toLowerCase().includes('veo')) {
+        return model;
+    }
+    console.log(`Video model ${model} is not supported by Gemini API. Using veo-2.0-generate-001 instead.`);
+    return 'veo-2.0-generate-001';
+};
+
 export const generateImageForPanel = async (description: string, config: { imageModel: string, aspectRatio: AspectRatio, visualStyle: VisualStyle }): Promise<string> => {
     const visualStylePrompt = config.visualStyle === VisualStyle.PHOTOREALISTIC ? 'photorealistic, cinematic' : config.visualStyle;
     const prompt = `${description}, ${visualStylePrompt} style, high detail`;
 
+    // Use compatible Gemini image model
+    const modelToUse = getGeminiCompatibleImageModel(config.imageModel);
+    
     // Corrected: Use ai.models.generateImages for image generation as per guidelines.
     const response = await ai.models.generateImages({
-        model: config.imageModel,
+        model: modelToUse,
         prompt,
         config: {
             numberOfImages: 1,
@@ -169,9 +208,12 @@ export const generateImageForPanel = async (description: string, config: { image
 };
 
 export const generateVideoForPanel = async (prompt: string, imageBase64: string, videoModel: string): Promise<string> => {
+    // Use compatible Gemini video model
+    const modelToUse = getGeminiCompatibleVideoModel(videoModel);
+    
     // Corrected: Use ai.models.generateVideos for video generation as per guidelines.
     let operation = await ai.models.generateVideos({
-        model: videoModel,
+        model: modelToUse,
         prompt: prompt,
         image: {
             imageBytes: imageBase64,

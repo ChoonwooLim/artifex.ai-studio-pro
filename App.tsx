@@ -38,7 +38,7 @@ import {
     VisualArtState,
     VisualArtEffect,
 } from './types';
-import * as geminiService from './services/geminiService';
+import { aiService } from './services/aiService';
 import * as db from './services/db';
 import { useTranslation } from './i18n/LanguageContext';
 import { sampleProductsData, sampleStoryIdeasData } from './sampleData';
@@ -139,7 +139,19 @@ const App: React.FC = () => {
         setError(null);
         setDescription('');
         try {
-            const result = await geminiService.generateDescription(descriptionConfig);
+            const prompt = `Generate a compelling product description.
+    - Product Name: ${descriptionConfig.productName}
+    - Key Features: ${descriptionConfig.keyFeatures}
+    - Target Audience: ${descriptionConfig.targetAudience}
+    - Tone: ${descriptionConfig.tone}
+    - Language: ${descriptionConfig.language}
+    
+    The description should be concise, engaging, and highlight the key benefits for the target audience. Do not include a title or header.`;
+            const result = await aiService.generateText({
+                prompt,
+                model: descriptionConfig.textModel,
+                temperature: 0.7
+            });
             setDescription(result);
         } catch (e: any) {
             setError(e.message || t('errors.descriptionGeneration'));
@@ -158,7 +170,20 @@ const App: React.FC = () => {
         setStoryboardPanels([]);
 
         try {
-            const panels = await geminiService.generateStoryboard(idea, config);
+            const prompt = `Generate a ${config.sceneCount}-scene storyboard for a ${config.videoLength} video.
+    - Idea: ${idea}
+    - Visual Style: ${config.visualStyle}
+    - Aspect Ratio: ${config.aspectRatio}
+    - Mood: ${config.mood}
+    - Language for descriptions: ${config.descriptionLanguage}
+    
+    Return exactly ${config.sceneCount} scene descriptions. Each should be visual, cinematic, and suitable for the specified mood and style.`;
+            const storyboardText = await aiService.generateText({
+                prompt,
+                model: config.textModel,
+                temperature: 0.8
+            });
+            const panels = storyboardText.split('\n\n').filter(p => p.trim()).slice(0, config.sceneCount).map(description => ({ description }));
             const initialPanels: StoryboardPanel[] = panels.map(p => ({ ...p, isLoadingImage: true }));
             setStoryboardPanels(initialPanels);
             setIsGeneratingStoryboard(false);
@@ -167,7 +192,13 @@ const App: React.FC = () => {
             let currentPanels = [...initialPanels];
             for (let i = 0; i < panels.length; i++) {
                 try {
-                    const imageBase64 = await geminiService.generateImageForPanel(panels[i].description, config);
+                    const imageUrls = await aiService.generateImage({
+                        prompt: panels[i].description,
+                        model: config.imageModel,
+                        aspectRatio: config.aspectRatio,
+                        count: 1
+                    });
+                    const imageBase64 = imageUrls[0];
                     currentPanels[i] = { ...currentPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
                 } catch (imgErr: any) {
                     console.error(`Image generation failed for panel ${i}:`, imgErr);
@@ -191,7 +222,15 @@ const App: React.FC = () => {
         setDetailedModalError(null);
         setDetailedModalPanels([]);
         try {
-            const newPanelsData = await geminiService.generateDetailedStoryboard(sceneDescription, storyboardConfig.descriptionLanguage);
+            const prompt = `Generate a detailed 4-scene expansion of this scene: "${sceneDescription}".
+    Language: ${storyboardConfig.descriptionLanguage}
+    Return exactly 4 detailed scene descriptions that expand on the original scene.`;
+            const detailedText = await aiService.generateText({
+                prompt,
+                model: storyboardConfig.textModel,
+                temperature: 0.8
+            });
+            const newPanelsData = detailedText.split('\n\n').filter(p => p.trim()).slice(0, 4).map(description => ({ description }));
             const newPanels: DetailedStoryboardPanel[] = newPanelsData.map(p => ({ ...p, isLoadingImage: true }));
             setDetailedModalPanels(newPanels);
             setIsDetailedModalLoading(false);
@@ -199,7 +238,13 @@ const App: React.FC = () => {
             let currentDetailedPanels = [...newPanels];
             for (let i = 0; i < newPanels.length; i++) {
                 try {
-                    const imageBase64 = await geminiService.generateImageForPanel(newPanels[i].description, storyboardConfig);
+                    const imageUrls = await aiService.generateImage({
+                        prompt: newPanels[i].description,
+                        model: storyboardConfig.imageModel,
+                        aspectRatio: storyboardConfig.aspectRatio,
+                        count: 1
+                    });
+                    const imageBase64 = imageUrls[0];
                     currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
                 } catch (imgErr) {
                     currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: 'error', isLoadingImage: false };
@@ -234,7 +279,13 @@ const App: React.FC = () => {
         setStoryboardPanels(panels);
 
         try {
-            const imageBase64 = await geminiService.generateImageForPanel(panels[index].description, storyboardConfig);
+            const imageUrls = await aiService.generateImage({
+                prompt: panels[index].description,
+                model: storyboardConfig.imageModel,
+                aspectRatio: storyboardConfig.aspectRatio,
+                count: 1
+            });
+            const imageBase64 = imageUrls[0];
             panels[index].imageUrl = `data:image/jpeg;base64,${imageBase64}`;
         } catch (e) {
             panels[index].imageUrl = 'error';
@@ -254,7 +305,11 @@ const App: React.FC = () => {
 
         try {
             const imageBase64 = panel.imageUrl.split(',')[1];
-            const videoUrl = await geminiService.generateVideoForPanel(panel.description, imageBase64, storyboardConfig.videoModel);
+            const videoUrl = await aiService.generateVideo({
+                prompt: panel.description,
+                model: storyboardConfig.videoModel,
+                duration: panel.sceneDuration || 4
+            });
             panels[index].videoUrl = videoUrl;
         } catch (e: any) {
             panels[index].videoUrl = 'error';
@@ -315,18 +370,30 @@ const App: React.FC = () => {
 
         try {
             const { sourceImage, style, styleParams } = mediaArtState;
-            const panels = await geminiService.generateMediaArtStoryboard(sourceImage, style, styleParams, language);
+            // For now, use text generation to create media art panels
+            const styleDescription = style.replace(/_/g, ' ').toLowerCase();
+            const prompt = `Create a 4-scene artistic transformation of an image (${sourceImage.title}) using the ${styleDescription} style.
+    Language: ${language}
+    Return exactly 4 scene descriptions that artistically transform the original image.`;
+            const panelText = await aiService.generateText({
+                prompt,
+                model: 'gemini-2.5-flash',
+                temperature: 0.9
+            });
+            const panels = panelText.split('\n\n').filter(p => p.trim()).slice(0, 4).map(description => ({ description }));
             const initialPanels: StoryboardPanel[] = panels.map(p => ({ ...p, isLoadingImage: true, sceneDuration: 4 }));
             setMediaArtState(s => ({ ...s, panels: initialPanels }));
             
             let currentPanels = [...initialPanels];
             for (let i = 0; i < panels.length; i++) {
                 try {
-                    const imageBase64 = await geminiService.generateImageForPanel(panels[i].description, {
-                        imageModel: 'imagen-4.0-generate-001',
+                    const imageUrls = await aiService.generateImage({
+                        prompt: panels[i].description,
+                        model: 'flux-pro',
                         aspectRatio: AspectRatio.LANDSCAPE,
-                        visualStyle: VisualStyle.CINEMATIC // Default for art
+                        count: 1
                     });
+                    const imageBase64 = imageUrls[0];
                     currentPanels[i] = { ...currentPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
                 } catch (imgErr) {
                     currentPanels[i] = { ...currentPanels[i], imageUrl: 'error', isLoadingImage: false };
@@ -349,11 +416,13 @@ const App: React.FC = () => {
         setMediaArtState(s => ({ ...s, panels: updatedPanels }));
     
         try {
-            const imageBase64 = await geminiService.generateImageForPanel(updatedPanels[index].description, {
-                imageModel: 'imagen-4.0-generate-001',
+            const imageUrls = await aiService.generateImage({
+                prompt: updatedPanels[index].description,
+                model: 'flux-pro',
                 aspectRatio: AspectRatio.LANDSCAPE,
-                visualStyle: VisualStyle.CINEMATIC
+                count: 1
             });
+            const imageBase64 = imageUrls[0];
             updatedPanels[index] = { ...updatedPanels[index], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
         } catch (e) {
             updatedPanels[index] = { ...updatedPanels[index], imageUrl: 'error', isLoadingImage: false };
@@ -366,7 +435,11 @@ const App: React.FC = () => {
     const handleGenerateVisualArt = async () => {
         setVisualArtState(s => ({ ...s, isLoading: true, error: null, resultVideoUrl: null }));
         try {
-            const resultUrl = await geminiService.generateVisualArtVideo(visualArtState.inputText, visualArtState.effect);
+            const resultUrl = await aiService.generateVideo({
+                prompt: `Create a visual art video with ${visualArtState.effect} effects based on: ${visualArtState.inputText}`,
+                model: 'luma-dream-machine',
+                duration: 5
+            });
             setVisualArtState(s => ({ ...s, resultVideoUrl: resultUrl }));
         } catch (e: any) {
             setVisualArtState(s => ({ ...s, error: e.message || t('errors.visualArtGeneration') }));
