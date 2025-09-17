@@ -11,6 +11,7 @@ import StoryboardDisplay from './components/StoryboardDisplay';
 import DetailedStoryboardModal from './components/DetailedStoryboardModal';
 import VideoDisplay from './components/VideoDisplay';
 import ApiKeyInstructions from './components/ApiKeyInstructions';
+import ApiKeyManager from './components/ApiKeyManager';
 import SampleGalleryModal from './components/SampleGalleryModal';
 import GalleryModal from './components/GalleryModal';
 import MediaArtGenerator from './components/MediaArtGenerator';
@@ -59,6 +60,9 @@ const App: React.FC = () => {
         targetAudience: '',
         tone: Tone.FRIENDLY,
         language: 'English',
+        textModel: 'gemini-2.5-flash',
+        imageModel: 'imagen-4.0-generate-001',
+        videoModel: 'veo-2.0-generate-001',
     };
     const [descriptionConfig, setDescriptionConfig] = useState<DescriptionConfig>(initialDescriptionConfig);
     const [description, setDescription] = useState('');
@@ -114,6 +118,7 @@ const App: React.FC = () => {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+    const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
     
     // Generic loading/error for now
     const [error, setError] = useState<string | null>(null);
@@ -378,7 +383,12 @@ const App: React.FC = () => {
         <>
             <div className="bg-slate-900 text-white min-h-screen font-sans">
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <Header onOpenGallery={handleOpenGallery} onNewProject={handleNewProject} onImport={() => {}} />
+                    <Header 
+                        onOpenGallery={handleOpenGallery} 
+                        onNewProject={handleNewProject} 
+                        onImport={() => {}} 
+                        onOpenApiKeys={() => setIsApiKeyManagerOpen(true)}
+                    />
                     <div className="mt-12">
                         <ModeSwitcher mode={mode} setMode={setMode} />
                     </div>
@@ -480,6 +490,10 @@ const App: React.FC = () => {
                 onLoad={() => {}} // Simplified for now
                 onDelete={() => {}} // Simplified for now
                 onExport={() => {}} // Simplified for now
+            />
+            <ApiKeyManager
+                isOpen={isApiKeyManagerOpen}
+                onClose={() => setIsApiKeyManagerOpen(false)}
             />
             <ImageSelectionModal
                 isOpen={isImageSelectorOpen}

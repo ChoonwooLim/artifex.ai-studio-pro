@@ -57,15 +57,31 @@ export const DESCRIPTION_LANGUAGE_OPTIONS: { value: string; label: string }[] = 
 ];
 
 export const TEXT_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', description: 'OpenAI\'s most capable model with enhanced reasoning.' },
+    { value: 'claude-3-opus', label: 'Claude 3 Opus', description: 'Anthropic\'s most powerful model for complex tasks.' },
+    { value: 'grok-2', label: 'Grok 2', description: 'xAI\'s witty and uncensored AI with real-time knowledge.' },
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, multimodal, and cost-effective for most tasks.' },
+    { value: 'gemini-pro', label: 'Gemini Pro', description: 'Google\'s advanced AI with multimodal capabilities.' },
+    { value: 'llama-2-70b', label: 'LLaMA 2 70B', description: 'Meta\'s open-source large language model.' },
+    { value: 'mistral-large', label: 'Mistral Large', description: 'Powerful model with excellent performance.' },
+    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', description: 'Fast and efficient for everyday tasks.' },
 ];
 
 export const IMAGE_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
+    { value: 'dall-e-3', label: 'DALL-E 3', description: 'OpenAI\'s latest image generation with enhanced detail.' },
+    { value: 'midjourney-v6', label: 'Midjourney v6', description: 'Artistic and creative image generation.' },
+    { value: 'stable-diffusion-xl', label: 'Stable Diffusion XL', description: 'Open-source high-quality image generation.' },
     { value: 'imagen-4.0-generate-001', label: 'Imagen 4.0', description: 'Google\'s most advanced image generation model.' },
+    { value: 'firefly-3', label: 'Adobe Firefly 3', description: 'Adobe\'s creative AI for professional use.' },
 ];
 
 export const VIDEO_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
+    { value: 'sora', label: 'Sora', description: 'OpenAI\'s groundbreaking text-to-video model.' },
+    { value: 'luma-dream-machine', label: 'Luma Dream Machine', description: 'Fast, high-quality video generation with realistic motion.' },
+    { value: 'runway-gen3', label: 'Runway Gen-3', description: 'Professional video generation with high fidelity.' },
+    { value: 'pika-labs', label: 'Pika Labs', description: 'Creative video generation with cinematic quality.' },
     { value: 'veo-2.0-generate-001', label: 'Veo 2.0', description: 'Google\'s advanced video model.' },
+    { value: 'stable-video', label: 'Stable Video Diffusion', description: 'Open-source video generation model.' },
 ];
 
 

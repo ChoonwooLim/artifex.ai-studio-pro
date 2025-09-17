@@ -4,7 +4,8 @@
     "subtitle": "An AI-powered creative suite to generate compelling product descriptions and visualize ideas with detailed storyboards and video clips.",
     "newProject": "New",
     "importProject": "Import",
-    "openGallery": "Gallery"
+    "openGallery": "Gallery",
+    "apiKeys": "API Keys"
   },
   "tooltips": {
     "newProject": "Start a new blank project",
@@ -13,7 +14,8 @@
     "regenerateImage": "Regenerate Image",
     "generateVideo": "Generate Video Clip",
     "expandScene": "Expand Scene into more shots",
-    "deletePanel": "Delete Panel"
+    "deletePanel": "Delete Panel",
+    "apiKeys": "Manage API Keys for all AI services"
   },
   "modeSwitcher": {
     "productDescription": "Product Description",
@@ -32,7 +34,11 @@
     "language": "Output Language",
     "generating": "Generating...",
     "generateButton": "Generate Description",
-    "loadSample": "Load Sample"
+    "loadSample": "Load Sample",
+    "aiModelSettings": "AI Model Settings",
+    "textModel": "Text Generation Model",
+    "imageModel": "Image Generation Model",
+    "videoModel": "Video Generation Model"
   },
   "descriptionDisplay": {
     "title": "Generated Description",
@@ -288,6 +294,17 @@
     "sleepingGypsy": { "title": "The Sleeping Gypsy", "artist": "Henri Rousseau" },
     "bacchus": { "title": "Bacchus", "artist": "Caravaggio" },
     "thirdOfMay": { "title": "The Third of May 1808", "artist": "Francisco Goya" }
+  },
+  "apiKeys": {
+    "title": "API Key Management",
+    "subtitle": "Configure API keys for all AI services",
+    "getKey": "Get Key",
+    "docs": "Docs",
+    "pricing": "Pricing",
+    "placeholder": "Enter your API key here...",
+    "securityNote": "API keys are stored locally in your browser",
+    "save": "Save",
+    "cancel": "Cancel"
   },
   "errors": {
     "descriptionGeneration": "Failed to generate description. Please try again.",

@@ -59,8 +59,9 @@ export const generateDescription = async (config: DescriptionConfig): Promise<st
     The description should be concise, engaging, and highlight the key benefits for the target audience. Do not include a title or header.`;
     
     // Corrected: Use ai.models.generateContent as per guidelines
+    // Now using the selected text model from config
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: config.textModel || 'gemini-2.5-flash',
         contents: prompt,
     });
     // Corrected: Access text directly from response.text property

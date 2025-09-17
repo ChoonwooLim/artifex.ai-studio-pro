@@ -9,9 +9,10 @@ interface HeaderProps {
     onOpenGallery: () => void;
     onNewProject: () => void;
     onImport: () => void;
+    onOpenApiKeys: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenGallery, onNewProject, onImport }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenGallery, onNewProject, onImport, onOpenApiKeys }) => {
     const { t, language, setLanguage } = useTranslation();
     const title = t('header.title');
     const subtitle = t('header.subtitle');
@@ -57,6 +58,16 @@ const Header: React.FC<HeaderProps> = ({ onOpenGallery, onNewProject, onImport }
                     >
                         <GalleryIcon className="w-4 h-4 flex-shrink-0" />
                         <span className="hidden sm:inline">{t('header.openGallery')}</span>
+                    </button>
+                    <button 
+                        onClick={onOpenApiKeys}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-3 sm:px-4 rounded-lg transition-all flex items-center gap-2 shadow-lg"
+                        title={t('tooltips.apiKeys')}
+                    >
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        <span className="hidden sm:inline">{t('header.apiKeys')}</span>
                     </button>
                 </div>
             </div>

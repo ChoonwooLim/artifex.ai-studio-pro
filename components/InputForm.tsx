@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DescriptionConfig, Tone, SampleProduct } from '../types';
-import { TONE_OPTIONS, DESCRIPTION_LANGUAGE_OPTIONS } from '../constants';
+import { TONE_OPTIONS, DESCRIPTION_LANGUAGE_OPTIONS, TEXT_MODEL_OPTIONS, IMAGE_MODEL_OPTIONS, VIDEO_MODEL_OPTIONS } from '../constants';
 import { useTranslation } from '../i18n/LanguageContext';
 
 interface InputFormProps {
@@ -13,6 +13,7 @@ interface InputFormProps {
 
 const InputForm: React.FC<InputFormProps> = ({ config, setConfig, onGenerate, isLoading, onShowSampleGallery }) => {
     const { t } = useTranslation();
+    const [showAdvancedSettings, setShowAdvancedSettings] = useState(true);
 
     const handleConfigChange = (field: keyof DescriptionConfig, value: string) => {
         setConfig({ ...config, [field]: value });
@@ -84,6 +85,68 @@ const InputForm: React.FC<InputFormProps> = ({ config, setConfig, onGenerate, is
                         className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                         {DESCRIPTION_LANGUAGE_OPTIONS.map(o => <option key={o.value} value={o.value} className="bg-slate-800">{o.label}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* AI Model Selection Section */}
+            <div className="space-y-6 p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                <h3 className="text-lg font-semibold text-slate-200 mb-4">{t('inputForm.aiModelSettings')}</h3>
+                
+                {/* Text Model Selection */}
+                <div>
+                    <label htmlFor="textModel" className="block text-sm font-medium text-slate-300 mb-2">
+                        {t('inputForm.textModel')}
+                    </label>
+                    <select
+                        id="textModel"
+                        value={config.textModel}
+                        onChange={(e) => handleConfigChange('textModel', e.target.value)}
+                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        {TEXT_MODEL_OPTIONS.map(o => (
+                            <option key={o.value} value={o.value} className="bg-slate-800">
+                                {o.label} - {o.description}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Image Model Selection */}
+                <div>
+                    <label htmlFor="imageModel" className="block text-sm font-medium text-slate-300 mb-2">
+                        {t('inputForm.imageModel')}
+                    </label>
+                    <select
+                        id="imageModel"
+                        value={config.imageModel}
+                        onChange={(e) => handleConfigChange('imageModel', e.target.value)}
+                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        {IMAGE_MODEL_OPTIONS.map(o => (
+                            <option key={o.value} value={o.value} className="bg-slate-800">
+                                {o.label} - {o.description}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Video Model Selection */}
+                <div>
+                    <label htmlFor="videoModel" className="block text-sm font-medium text-slate-300 mb-2">
+                        {t('inputForm.videoModel')}
+                    </label>
+                    <select
+                        id="videoModel"
+                        value={config.videoModel}
+                        onChange={(e) => handleConfigChange('videoModel', e.target.value)}
+                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        {VIDEO_MODEL_OPTIONS.map(o => (
+                            <option key={o.value} value={o.value} className="bg-slate-800">
+                                {o.label} - {o.description}
+                            </option>
+                        ))}
                     </select>
                 </div>
             </div>

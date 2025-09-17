@@ -4,7 +4,8 @@
     "subtitle": "AI 기반 크리에이티브 스위트로, 매력적인 제품 설명을 생성하고 상세한 스토리보드와 비디오 클립으로 아이디어를 시각화하세요.",
     "newProject": "새로 만들기",
     "importProject": "가져오기",
-    "openGallery": "갤러리"
+    "openGallery": "갤러리",
+    "apiKeys": "API 키"
   },
   "tooltips": {
     "newProject": "새로운 빈 프로젝트 시작하기",
@@ -13,7 +14,8 @@
     "regenerateImage": "이미지 재생성",
     "generateVideo": "비디오 클립 생성",
     "expandScene": "장면을 더 많은 샷으로 확장",
-    "deletePanel": "패널 삭제"
+    "deletePanel": "패널 삭제",
+    "apiKeys": "모든 AI 서비스의 API 키 관리"
   },
   "modeSwitcher": {
     "productDescription": "제품 설명",
@@ -32,7 +34,11 @@
     "language": "출력 언어",
     "generating": "생성 중...",
     "generateButton": "설명 생성하기",
-    "loadSample": "샘플 불러오기"
+    "loadSample": "샘플 불러오기",
+    "aiModelSettings": "AI 모델 설정",
+    "textModel": "텍스트 생성 모델",
+    "imageModel": "이미지 생성 모델",
+    "videoModel": "비디오 생성 모델"
   },
   "descriptionDisplay": {
     "title": "생성된 설명",
@@ -288,6 +294,17 @@
     "sleepingGypsy": { "title": "잠자는 집시", "artist": "앙리 루소" },
     "bacchus": { "title": "바쿠스", "artist": "카라바조" },
     "thirdOfMay": { "title": "1808년 5월 3일", "artist": "프란시스코 고야" }
+  },
+  "apiKeys": {
+    "title": "API 키 관리",
+    "subtitle": "모든 AI 서비스의 API 키 설정",
+    "getKey": "키 발급",
+    "docs": "문서",
+    "pricing": "가격",
+    "placeholder": "여기에 API 키를 입력하세요...",
+    "securityNote": "API 키는 브라우저에 로컬로 저장됩니다",
+    "save": "저장",
+    "cancel": "취소"
   },
   "errors": {
     "descriptionGeneration": "설명 생성에 실패했습니다. 다시 시도해주세요.",
