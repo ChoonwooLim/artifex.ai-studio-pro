@@ -49,14 +49,16 @@ export class OpenAIService {
 
         try {
             const modelMap: { [key: string]: string } = {
-                'gpt-5': 'gpt-5',
-                'gpt-5-turbo': 'gpt-5-turbo',
-                'gpt-o1': 'gpt-o1',
-                'gpt-o1-mini': 'gpt-o1-mini',
-                'gpt-4o': 'gpt-4o'
+                'gpt-5': 'gpt-4o',  // Fallback to gpt-4o until GPT-5 is available
+                'gpt-5-turbo': 'gpt-4o',  // Fallback to gpt-4o
+                'o1-pro': 'o1-preview',  // Use o1-preview as fallback
+                'o1-preview': 'o1-preview',
+                'o1-mini': 'o1-mini',
+                'gpt-4o': 'gpt-4o',
+                'gpt-4o-mini': 'gpt-4o-mini'
             };
 
-            const actualModel = modelMap[options.model] || 'gpt-4o';
+            const actualModel = modelMap[options.model] || options.model;
 
             const response = await this.client.chat.completions.create({
                 model: actualModel,
@@ -99,8 +101,12 @@ export class OpenAIService {
         }
 
         try {
+            // Map display names to actual API model names
             const modelMap: { [key: string]: string } = {
+                'dall-e-4-hd': 'dall-e-3',  // Fallback to DALL-E 3 until 4 is available
+                'dall-e-4': 'dall-e-3',  // Fallback to DALL-E 3
                 'dall-e-3': 'dall-e-3',
+                'dall-e-3-hd': 'dall-e-3',
                 'dall-e-2': 'dall-e-2'
             };
 

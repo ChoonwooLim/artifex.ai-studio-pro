@@ -44,7 +44,27 @@ import { useTranslation } from './i18n/LanguageContext';
 import { sampleProductsData, sampleStoryIdeasData } from './sampleData';
 import { MEDIA_ART_STYLE_OPTIONS } from './constants';
 
-const API_KEY = process.env.API_KEY;
+const hasApiKeys = () => {
+    // Check environment variables
+    if (import.meta.env.VITE_GOOGLE_API_KEY || 
+        import.meta.env.VITE_OPENAI_API_KEY || 
+        import.meta.env.VITE_ANTHROPIC_API_KEY ||
+        import.meta.env.VITE_XAI_API_KEY ||
+        import.meta.env.VITE_REPLICATE_API_KEY) {
+        return true;
+    }
+    
+    // Check localStorage
+    if (localStorage.getItem('apiKey_google') ||
+        localStorage.getItem('apiKey_openai') ||
+        localStorage.getItem('apiKey_anthropic') ||
+        localStorage.getItem('apiKey_xai') ||
+        localStorage.getItem('apiKey_replicate')) {
+        return true;
+    }
+    
+    return false;
+};
 
 const App: React.FC = () => {
     const { t, language } = useTranslation();
@@ -60,9 +80,9 @@ const App: React.FC = () => {
         targetAudience: '',
         tone: Tone.FRIENDLY,
         language: 'English',
-        textModel: 'gemini-2.5-flash',
-        imageModel: 'imagen-4.0-generate-001',
-        videoModel: 'veo-2.0-generate-001',
+        textModel: 'gpt-5-turbo',
+        imageModel: 'dall-e-4-hd',
+        videoModel: 'sora-2-turbo',
     };
     const [descriptionConfig, setDescriptionConfig] = useState<DescriptionConfig>(initialDescriptionConfig);
     const [description, setDescription] = useState('');
@@ -76,9 +96,9 @@ const App: React.FC = () => {
         videoLength: VideoLength.SHORT,
         mood: Mood.EPIC,
         descriptionLanguage: 'English',
-        textModel: 'gemini-2.5-flash',
-        imageModel: 'imagen-4.0-generate-001',
-        videoModel: 'veo-2.0-generate-001',
+        textModel: 'gpt-5-turbo',
+        imageModel: 'dall-e-4-hd',
+        videoModel: 'sora-2-turbo',
     };
     const [storyboardConfig, setStoryboardConfig] = useState<StoryboardConfig>(initialStoryboardConfig);
     const [storyIdea, setStoryIdea] = useState('');
@@ -199,7 +219,11 @@ const App: React.FC = () => {
                         count: 1
                     });
                     const imageBase64 = imageUrls[0];
-                    currentPanels[i] = { ...currentPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
+                    // Check if it's already a data URL or a placeholder URL
+                    const imageUrl = imageBase64.startsWith('data:') || imageBase64.startsWith('http') 
+                        ? imageBase64 
+                        : `data:image/jpeg;base64,${imageBase64}`;
+                    currentPanels[i] = { ...currentPanels[i], imageUrl, isLoadingImage: false };
                 } catch (imgErr: any) {
                     console.error(`Image generation failed for panel ${i}:`, imgErr);
                     const isQuotaError = imgErr.message?.includes('429');
@@ -394,7 +418,11 @@ const App: React.FC = () => {
                         count: 1
                     });
                     const imageBase64 = imageUrls[0];
-                    currentPanels[i] = { ...currentPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
+                    // Check if it's already a data URL or a placeholder URL
+                    const imageUrl = imageBase64.startsWith('data:') || imageBase64.startsWith('http') 
+                        ? imageBase64 
+                        : `data:image/jpeg;base64,${imageBase64}`;
+                    currentPanels[i] = { ...currentPanels[i], imageUrl, isLoadingImage: false };
                 } catch (imgErr) {
                     currentPanels[i] = { ...currentPanels[i], imageUrl: 'error', isLoadingImage: false };
                 }
@@ -448,7 +476,7 @@ const App: React.FC = () => {
         }
     };
 
-    if (!API_KEY) {
+    if (!hasApiKeys()) {
         return <ApiKeyInstructions />;
     }
 

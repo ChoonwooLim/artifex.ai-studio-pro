@@ -49,24 +49,43 @@ class AIService {
     private getProviderForModel(model: string): string {
         const modelLower = model.toLowerCase();
 
+        // OpenAI models
         if (modelLower.includes('gpt') || modelLower.includes('dall-e') || modelLower.includes('o1')) {
             return 'openai';
         }
+        
+        // Anthropic models
         if (modelLower.includes('claude') || modelLower.includes('opus') || modelLower.includes('sonnet') || modelLower.includes('haiku')) {
             return 'anthropic';
         }
+        
+        // xAI models
         if (modelLower.includes('grok')) {
             return 'xai';
         }
-        if (modelLower.includes('gemini') || modelLower.includes('imagen') || modelLower.includes('veo')) {
+        
+        // Google models
+        if (modelLower.includes('gemini') || modelLower.includes('palm')) {
             return 'google';
         }
-        if (modelLower.includes('midjourney') || modelLower.includes('flux') || modelLower.includes('luma') || 
-            modelLower.includes('runway') || modelLower.includes('pika') || modelLower.includes('stable') || 
-            modelLower.includes('kandinsky')) {
+        
+        // Replicate models (most open source and third-party models)
+        if (modelLower.includes('midjourney') || modelLower.includes('flux') || 
+            modelLower.includes('stable') || modelLower.includes('sdxl') || 
+            modelLower.includes('kandinsky') || modelLower.includes('realvis') ||
+            modelLower.includes('ideogram') || modelLower.includes('playground') ||
+            modelLower.includes('recraft') || modelLower.includes('luma') ||
+            modelLower.includes('dream-machine') || modelLower.includes('runway') ||
+            modelLower.includes('cogvideo') || modelLower.includes('animate') ||
+            modelLower.includes('zeroscope') || modelLower.includes('modelscope') ||
+            modelLower.includes('video-crafter') || modelLower.includes('llama') ||
+            modelLower.includes('mistral') || modelLower.includes('mixtral') ||
+            modelLower.includes('qwen') || modelLower.includes('deepseek') ||
+            modelLower.includes('command')) {
             return 'replicate';
         }
 
+        // Default to Google for unknown models
         return 'google';
     }
 
@@ -118,14 +137,16 @@ class AIService {
             throw new Error('Google AI API key not configured');
         }
 
+        // Map display names to actual API model names
         const modelMap: { [key: string]: string } = {
-            'gemini-2.5-flash': 'gemini-1.5-flash',
-            'gemini-2.5-pro': 'gemini-1.5-pro',
-            'gemini-2.5-deep-think': 'gemini-1.5-pro',
+            'gemini-2-0-flash-exp': 'gemini-2.0-flash-exp',
+            'gemini-exp-1206': 'gemini-exp-1206',
+            'gemini-1.5-pro': 'gemini-1.5-pro',
+            'gemini-1.5-flash': 'gemini-1.5-flash',
             'gemini-pro': 'gemini-pro'
         };
 
-        const actualModel = modelMap[options.model] || 'gemini-1.5-flash';
+        const actualModel = modelMap[options.model] || options.model;
         const model = this.googleGenAI.getGenerativeModel({ model: actualModel });
 
         const result = await model.generateContent({
@@ -177,26 +198,20 @@ class AIService {
     }
 
     private async generateGoogleImage(options: GenerateImageOptions): Promise<string[]> {
-        if (!this.googleGenAI) {
-            throw new Error('Google AI API key not configured');
+        // Google Imagen API is not yet publicly available
+        // Automatically redirect to Replicate for image generation
+        console.log('Google Imagen not available, redirecting to Replicate service');
+        if (!this.replicateService.isConfigured()) {
+            throw new Error(
+                'Google Imagen API is not yet publicly available. ' +
+                'Please configure Replicate API key or use DALL-E models with OpenAI API key.'
+            );
         }
-
-        const imageModel = this.googleGenAI.getGenerativeModel({ model: 'imagen-3.0' });
-        const imagePrompt = `Generate an image: ${options.prompt}`;
-
-        try {
-            const result = await imageModel.generateContent(imagePrompt);
-            const response = result.response;
-            
-            if (response.candidates && response.candidates[0]) {
-                return ['https://via.placeholder.com/1024x1024?text=Image+Generation+In+Progress'];
-            }
-            
-            return ['https://via.placeholder.com/1024x1024?text=Image+Generation+Failed'];
-        } catch (error) {
-            console.error('Google Image generation error:', error);
-            return ['https://via.placeholder.com/1024x1024?text=Image+Generation+Error'];
-        }
+        // Use Stable Diffusion XL as fallback
+        return await this.replicateService.generateImage({
+            ...options,
+            model: 'stable-diffusion-xl'
+        });
     }
 
     async generateVideo(options: GenerateVideoOptions): Promise<string> {
