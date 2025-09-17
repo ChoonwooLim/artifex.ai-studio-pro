@@ -11,7 +11,8 @@ export class XAIService {
     private client: OpenAI | null = null;
 
     constructor() {
-        const apiKey = localStorage.getItem('xai_api_key');
+        // Check environment variable first, then localStorage
+        const apiKey = import.meta.env.VITE_XAI_API_KEY || localStorage.getItem('apiKey_xai');
         if (apiKey) {
             this.client = new OpenAI({
                 apiKey: apiKey,
@@ -27,7 +28,17 @@ export class XAIService {
 
     async generateText(options: GenerateOptions): Promise<string> {
         if (!this.client) {
-            throw new Error('xAI API key not configured. Please add your API key in the API Keys settings.');
+            // Re-check environment variable and localStorage in case key was added after service initialization
+            const currentKey = import.meta.env.VITE_XAI_API_KEY || localStorage.getItem('apiKey_xai');
+            if (currentKey) {
+                this.client = new OpenAI({
+                    apiKey: currentKey,
+                    baseURL: 'https://api.x.ai/v1',
+                    dangerouslyAllowBrowser: true
+                });
+            } else {
+                throw new Error('xAI API key not configured. Please add your API key in the API Keys settings.');
+            }
         }
 
         try {

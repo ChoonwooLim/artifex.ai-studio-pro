@@ -11,7 +11,8 @@ export class AnthropicService {
     private client: Anthropic | null = null;
 
     constructor() {
-        const apiKey = localStorage.getItem('anthropic_api_key');
+        // Check environment variable first, then localStorage
+        const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('apiKey_anthropic');
         if (apiKey) {
             this.client = new Anthropic({
                 apiKey: apiKey,
@@ -26,7 +27,16 @@ export class AnthropicService {
 
     async generateText(options: GenerateOptions): Promise<string> {
         if (!this.client) {
-            throw new Error('Anthropic API key not configured. Please add your API key in the API Keys settings.');
+            // Re-check environment variable and localStorage in case key was added after service initialization
+            const currentKey = import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('apiKey_anthropic');
+            if (currentKey) {
+                this.client = new Anthropic({
+                    apiKey: currentKey,
+                    dangerouslyAllowBrowser: true
+                });
+            } else {
+                throw new Error('Anthropic API key not configured. Please add your API key in the API Keys settings.');
+            }
         }
 
         try {

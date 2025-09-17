@@ -19,7 +19,8 @@ export class OpenAIService {
     private client: OpenAI | null = null;
 
     constructor() {
-        const apiKey = localStorage.getItem('openai_api_key');
+        // Check environment variable first, then localStorage
+        const apiKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('apiKey_openai');
         if (apiKey) {
             this.client = new OpenAI({
                 apiKey: apiKey,
@@ -34,7 +35,16 @@ export class OpenAIService {
 
     async generateText(options: GenerateOptions): Promise<string> {
         if (!this.client) {
-            throw new Error('OpenAI API key not configured. Please add your API key in the API Keys settings.');
+            // Re-check environment variable and localStorage in case key was added after service initialization
+            const currentKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('apiKey_openai');
+            if (currentKey) {
+                this.client = new OpenAI({
+                    apiKey: currentKey,
+                    dangerouslyAllowBrowser: true
+                });
+            } else {
+                throw new Error('OpenAI API key not configured. Please add your API key in the API Keys settings.');
+            }
         }
 
         try {
@@ -76,7 +86,16 @@ export class OpenAIService {
 
     async generateImage(options: ImageGenerateOptions): Promise<string[]> {
         if (!this.client) {
-            throw new Error('OpenAI API key not configured. Please add your API key in the API Keys settings.');
+            // Re-check environment variable and localStorage in case key was added after service initialization
+            const currentKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('apiKey_openai');
+            if (currentKey) {
+                this.client = new OpenAI({
+                    apiKey: currentKey,
+                    dangerouslyAllowBrowser: true
+                });
+            } else {
+                throw new Error('OpenAI API key not configured. Please add your API key in the API Keys settings.');
+            }
         }
 
         try {

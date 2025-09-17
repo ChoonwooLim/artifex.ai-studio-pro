@@ -130,15 +130,42 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
     const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+    const [envKeys, setEnvKeys] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        // Load saved API keys from localStorage
+        // Load saved API keys from localStorage and check environment variables
         const savedKeys: Record<string, string> = {};
+        const envKeyStatus: Record<string, boolean> = {};
+        
+        const envVarMap: Record<string, string> = {
+            'openai': import.meta.env.VITE_OPENAI_API_KEY || '',
+            'anthropic': import.meta.env.VITE_ANTHROPIC_API_KEY || '',
+            'google': import.meta.env.VITE_GOOGLE_API_KEY || '',
+            'xai': import.meta.env.VITE_XAI_API_KEY || '',
+            'replicate': import.meta.env.VITE_REPLICATE_API_KEY || '',
+            'stability': import.meta.env.VITE_STABILITY_API_KEY || '',
+            'midjourney': import.meta.env.VITE_MIDJOURNEY_API_KEY || '',
+            'runway': import.meta.env.VITE_RUNWAY_API_KEY || '',
+            'pika': import.meta.env.VITE_PIKA_API_KEY || '',
+            'luma': import.meta.env.VITE_LUMA_API_KEY || '',
+            'adobe': import.meta.env.VITE_ADOBE_API_KEY || '',
+            'meta': import.meta.env.VITE_META_API_KEY || '',
+            'mistral': import.meta.env.VITE_MISTRAL_API_KEY || ''
+        };
+        
         API_SERVICES.forEach(service => {
-            const key = localStorage.getItem(`apiKey_${service.key}`);
-            if (key) savedKeys[service.key] = key;
+            // Check if key exists in environment variables
+            if (envVarMap[service.key]) {
+                envKeyStatus[service.key] = true;
+                savedKeys[service.key] = '••••••••' + envVarMap[service.key].slice(-4); // Show last 4 chars
+            } else {
+                // Otherwise, check localStorage
+                const key = localStorage.getItem(`apiKey_${service.key}`);
+                if (key) savedKeys[service.key] = key;
+            }
         });
         setApiKeys(savedKeys);
+        setEnvKeys(envKeyStatus);
     }, []);
 
     const handleKeyChange = (serviceKey: string, value: string) => {
@@ -235,12 +262,18 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isOpen, onClose }) => {
                                     </div>
                                 </div>
                                 <div className="relative">
+                                    {envKeys[service.key] && (
+                                        <div className="absolute -top-5 left-0 text-xs text-green-400">
+                                            ✓ Configured in .env.local
+                                        </div>
+                                    )}
                                     <input
                                         type={showKeys[service.key] ? 'text' : 'password'}
                                         value={apiKeys[service.key] || ''}
                                         onChange={(e) => handleKeyChange(service.key, e.target.value)}
-                                        placeholder={t('apiKeys.placeholder')}
-                                        className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 pr-12 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={envKeys[service.key] ? 'Using environment variable' : t('apiKeys.placeholder')}
+                                        disabled={envKeys[service.key]}
+                                        className={`w-full ${envKeys[service.key] ? 'bg-slate-800' : 'bg-slate-900'} border border-slate-600 rounded-lg px-4 py-2.5 pr-12 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${envKeys[service.key] ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     />
                                     <button
                                         type="button"

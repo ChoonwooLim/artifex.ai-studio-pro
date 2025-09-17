@@ -18,7 +18,8 @@ export class ReplicateService {
     private client: Replicate | null = null;
 
     constructor() {
-        const apiKey = localStorage.getItem('replicate_api_key');
+        // Check environment variable first, then localStorage
+        const apiKey = import.meta.env.VITE_REPLICATE_API_KEY || localStorage.getItem('apiKey_replicate');
         if (apiKey) {
             this.client = new Replicate({
                 auth: apiKey
@@ -32,7 +33,15 @@ export class ReplicateService {
 
     async generateImage(options: ImageGenerateOptions): Promise<string[]> {
         if (!this.client) {
-            throw new Error('Replicate API key not configured. Please add your API key in the API Keys settings.');
+            // Re-check environment variable and localStorage in case key was added after service initialization
+            const currentKey = import.meta.env.VITE_REPLICATE_API_KEY || localStorage.getItem('apiKey_replicate');
+            if (currentKey) {
+                this.client = new Replicate({
+                    auth: currentKey
+                });
+            } else {
+                throw new Error('Replicate API key not configured. Please add your API key in the API Keys settings.');
+            }
         }
 
         try {
@@ -103,7 +112,15 @@ export class ReplicateService {
 
     async generateVideo(options: VideoGenerateOptions): Promise<string> {
         if (!this.client) {
-            throw new Error('Replicate API key not configured. Please add your API key in the API Keys settings.');
+            // Re-check environment variable and localStorage in case key was added after service initialization
+            const currentKey = import.meta.env.VITE_REPLICATE_API_KEY || localStorage.getItem('apiKey_replicate');
+            if (currentKey) {
+                this.client = new Replicate({
+                    auth: currentKey
+                });
+            } else {
+                throw new Error('Replicate API key not configured. Please add your API key in the API Keys settings.');
+            }
         }
 
         try {

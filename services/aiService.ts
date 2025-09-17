@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, GenerativeModel } from '@google/genai';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { OpenAIService } from './aiProviders/openaiService';
 import { AnthropicService } from './aiProviders/anthropicService';
 import { XAIService } from './aiProviders/xaiService';
@@ -39,7 +39,8 @@ class AIService {
         this.xaiService = new XAIService();
         this.replicateService = new ReplicateService();
 
-        const geminiKey = localStorage.getItem('gemini_api_key');
+        // Check environment variable first, then localStorage
+        const geminiKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google');
         if (geminiKey) {
             this.googleGenAI = new GoogleGenerativeAI(geminiKey);
         }
@@ -96,6 +97,12 @@ class AIService {
                 case 'google':
                 default:
                     if (!this.googleGenAI) {
+                        // Re-check environment variable and localStorage in case key was added after service initialization
+                        const currentKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google');
+                        if (currentKey) {
+                            this.googleGenAI = new GoogleGenerativeAI(currentKey);
+                            return await this.generateGeminiText(options);
+                        }
                         throw new Error('Google AI API key not configured. Please add your API key in settings.');
                     }
                     return await this.generateGeminiText(options);
@@ -153,6 +160,12 @@ class AIService {
                 case 'google':
                 default:
                     if (!this.googleGenAI) {
+                        // Re-check environment variable and localStorage in case key was added after service initialization
+                        const currentKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google');
+                        if (currentKey) {
+                            this.googleGenAI = new GoogleGenerativeAI(currentKey);
+                            return await this.generateGoogleImage(options);
+                        }
                         throw new Error('Google AI API key not configured. Please add your API key in settings.');
                     }
                     return await this.generateGoogleImage(options);
