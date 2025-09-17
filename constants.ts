@@ -57,31 +57,45 @@ export const DESCRIPTION_LANGUAGE_OPTIONS: { value: string; label: string }[] = 
 ];
 
 export const TEXT_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', description: 'OpenAI\'s most capable model with enhanced reasoning.' },
-    { value: 'claude-3-opus', label: 'Claude 3 Opus', description: 'Anthropic\'s most powerful model for complex tasks.' },
-    { value: 'grok-2', label: 'Grok 2', description: 'xAI\'s witty and uncensored AI with real-time knowledge.' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, multimodal, and cost-effective for most tasks.' },
-    { value: 'gemini-pro', label: 'Gemini Pro', description: 'Google\'s advanced AI with multimodal capabilities.' },
-    { value: 'llama-2-70b', label: 'LLaMA 2 70B', description: 'Meta\'s open-source large language model.' },
-    { value: 'mistral-large', label: 'Mistral Large', description: 'Powerful model with excellent performance.' },
-    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', description: 'Fast and efficient for everyday tasks.' },
+    { value: 'gpt-5', label: 'GPT-5', description: 'OpenAI\'s best AI system with unified reasoning (Aug 2025).' },
+    { value: 'gpt-5-pro', label: 'GPT-5 Pro', description: 'Extended reasoning version for complex tasks.' },
+    { value: 'claude-opus-4.1', label: 'Claude Opus 4.1', description: 'Anthropic\'s most advanced with 74.5% on SWE-bench (Aug 2025).' },
+    { value: 'claude-sonnet-4', label: 'Claude Sonnet 4', description: '1M token context, 72.7% on SWE-bench coding.' },
+    { value: 'grok-3', label: 'Grok 3', description: 'xAI\'s latest with 1M token context (Feb 2025).' },
+    { value: 'grok-3-mini', label: 'Grok 3 Mini', description: 'Compact version of Grok 3 with reasoning.' },
+    { value: 'gemini-2.5-deep-think', label: 'Gemini 2.5 Deep Think', description: 'Google\'s most advanced reasoning model.' },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Advanced model with Deep Research capabilities.' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, multimodal, and cost-effective.' },
+    { value: 'llama-4-maverick', label: 'LLaMA 4 Maverick', description: 'Meta\'s latest with 1M token context (Apr 2025).' },
+    { value: 'llama-4-scout', label: 'LLaMA 4 Scout', description: 'Meta\'s mixture-of-experts model.' },
+    { value: 'llama-3.2-90b', label: 'LLaMA 3.2 90B', description: 'Vision-enabled model with image understanding.' },
+    { value: 'mistral-large-2', label: 'Mistral Large 2', description: '123B parameters, 128k context, 92% on HumanEval.' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', description: 'Previous generation model with strong performance.' },
 ];
 
 export const IMAGE_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    { value: 'dall-e-3', label: 'DALL-E 3', description: 'OpenAI\'s latest image generation with enhanced detail.' },
-    { value: 'midjourney-v6', label: 'Midjourney v6', description: 'Artistic and creative image generation.' },
-    { value: 'stable-diffusion-xl', label: 'Stable Diffusion XL', description: 'Open-source high-quality image generation.' },
-    { value: 'imagen-4.0-generate-001', label: 'Imagen 4.0', description: 'Google\'s most advanced image generation model.' },
-    { value: 'firefly-3', label: 'Adobe Firefly 3', description: 'Adobe\'s creative AI for professional use.' },
+    { value: 'gpt-image-1', label: 'GPT Image 1', description: 'OpenAI\'s native image generation (Apr 2025).' },
+    { value: 'midjourney-v7', label: 'Midjourney v7', description: 'Top quality realism and precision (Apr 2025).' },
+    { value: 'stable-diffusion-3.5-large', label: 'SD 3.5 Large', description: '8.1B parameters, best in SD family (Oct 2024).' },
+    { value: 'stable-diffusion-3.5-turbo', label: 'SD 3.5 Turbo', description: 'Fast 4-step generation with high quality.' },
+    { value: 'imagen-4.0-generate-001', label: 'Imagen 4.0', description: 'Google\'s advanced image generation.' },
+    { value: 'dall-e-3', label: 'DALL-E 3', description: 'Previous OpenAI model (still available).' },
+    { value: 'firefly-3', label: 'Adobe Firefly 3', description: 'Adobe\'s creative AI for professionals.' },
+    { value: 'flux-1-pro', label: 'FLUX.1 Pro', description: 'Black Forest Labs\'s state-of-the-art model.' },
+    { value: 'ideogram-2', label: 'Ideogram 2.0', description: 'Excellent text rendering in images.' },
 ];
 
 export const VIDEO_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    { value: 'sora', label: 'Sora', description: 'OpenAI\'s groundbreaking text-to-video model.' },
-    { value: 'luma-dream-machine', label: 'Luma Dream Machine', description: 'Fast, high-quality video generation with realistic motion.' },
-    { value: 'runway-gen3', label: 'Runway Gen-3', description: 'Professional video generation with high fidelity.' },
-    { value: 'pika-labs', label: 'Pika Labs', description: 'Creative video generation with cinematic quality.' },
-    { value: 'veo-2.0-generate-001', label: 'Veo 2.0', description: 'Google\'s advanced video model.' },
-    { value: 'stable-video', label: 'Stable Video Diffusion', description: 'Open-source video generation model.' },
+    { value: 'veo-3', label: 'Veo 3', description: 'Google\'s best with 1080p HD & native audio (Sep 2025).' },
+    { value: 'veo-3-fast', label: 'Veo 3 Fast', description: 'Faster version of Veo 3 for quick generation.' },
+    { value: 'veo-2', label: 'Veo 2', description: 'Google\'s previous gen, highly competitive (Dec 2024).' },
+    { value: 'sora-turbo', label: 'Sora Turbo', description: 'OpenAI\'s 20-sec video generation, 1080p (Dec 2024).' },
+    { value: 'midjourney-v7-video', label: 'Midjourney v7 Video', description: 'AI video up to 20 seconds (Apr 2025).' },
+    { value: 'luma-dream-machine', label: 'Luma Dream Machine', description: 'Fast, high-quality with realistic motion.' },
+    { value: 'runway-gen3-alpha', label: 'Runway Gen-3 Alpha', description: 'Professional video with high fidelity.' },
+    { value: 'pika-1.0', label: 'Pika 1.0', description: 'Creative video with cinematic quality.' },
+    { value: 'stable-video-diffusion', label: 'Stable Video Diffusion', description: 'Open-source video generation.' },
+    { value: 'kling-1.5', label: 'Kling 1.5', description: 'Kuaishou\'s advanced video model with motion control.' },
 ];
 
 

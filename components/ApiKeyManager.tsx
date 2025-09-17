@@ -20,56 +20,56 @@ const API_SERVICES: ApiKeyConfig[] = [
     {
         service: 'OpenAI',
         key: 'openai',
-        models: ['GPT-4 Turbo', 'GPT-3.5 Turbo', 'DALL-E 3', 'Sora'],
+        models: ['GPT-5', 'GPT-5 Pro', 'GPT Image 1', 'Sora Turbo'],
         docsUrl: 'https://platform.openai.com/docs',
         signupUrl: 'https://platform.openai.com/api-keys',
         pricingUrl: 'https://openai.com/pricing',
-        description: 'Access GPT-4, DALL-E 3, and upcoming Sora video model'
+        description: 'Access GPT-5 (Aug 2025), GPT Image 1, and Sora Turbo video'
     },
     {
         service: 'Anthropic (Claude)',
         key: 'anthropic',
-        models: ['Claude 3 Opus', 'Claude 3 Sonnet', 'Claude 3 Haiku'],
+        models: ['Claude Opus 4.1', 'Claude Sonnet 4', 'Claude 3.7'],
         docsUrl: 'https://docs.anthropic.com',
         signupUrl: 'https://console.anthropic.com/account/keys',
         pricingUrl: 'https://www.anthropic.com/pricing',
-        description: 'Access Claude 3 family of models'
+        description: 'Access Claude 4 series with 1M token context'
     },
     {
         service: 'Google AI (Gemini)',
         key: 'google',
-        models: ['Gemini Pro', 'Gemini 2.5 Flash', 'Imagen 4.0', 'Veo 2.0'],
+        models: ['Gemini 2.5 Deep Think', 'Gemini 2.5 Pro', 'Veo 3', 'Veo 3 Fast'],
         docsUrl: 'https://ai.google.dev/docs',
         signupUrl: 'https://aistudio.google.com/app/apikey',
         pricingUrl: 'https://ai.google.dev/pricing',
-        description: 'Access Gemini, Imagen, and Veo models'
+        description: 'Access Gemini 2.5 and Veo 3 with native audio (Sep 2025)'
     },
     {
         service: 'xAI (Grok)',
         key: 'xai',
-        models: ['Grok 2', 'Grok 2 mini'],
+        models: ['Grok 3', 'Grok 3 Mini', 'Grok 4 (Coming)'],
         docsUrl: 'https://docs.x.ai',
         signupUrl: 'https://x.ai/api',
         pricingUrl: 'https://x.ai/pricing',
-        description: 'Access Grok models with real-time information'
+        description: 'Access Grok 3 with 1M token context (Feb 2025)'
     },
     {
         service: 'Stability AI',
         key: 'stability',
-        models: ['Stable Diffusion XL', 'Stable Video Diffusion'],
+        models: ['SD 3.5 Large', 'SD 3.5 Turbo', 'Stable Video Diffusion'],
         docsUrl: 'https://platform.stability.ai/docs',
         signupUrl: 'https://platform.stability.ai/account/keys',
         pricingUrl: 'https://platform.stability.ai/pricing',
-        description: 'Open-source image and video generation'
+        description: 'Stable Diffusion 3.5 with 8.1B parameters (Oct 2024)'
     },
     {
         service: 'Midjourney',
         key: 'midjourney',
-        models: ['Midjourney v6'],
+        models: ['Midjourney v7', 'v7 Video (20 sec)'],
         docsUrl: 'https://docs.midjourney.com',
         signupUrl: 'https://www.midjourney.com/account',
         pricingUrl: 'https://www.midjourney.com/pricing',
-        description: 'Artistic image generation (Discord-based)'
+        description: 'Top realism & video generation (Apr 2025)'
     },
     {
         service: 'Runway',
@@ -110,19 +110,19 @@ const API_SERVICES: ApiKeyConfig[] = [
     {
         service: 'Meta (LLaMA)',
         key: 'meta',
-        models: ['LLaMA 2 70B'],
+        models: ['LLaMA 4 Maverick', 'LLaMA 4 Scout', 'LLaMA 3.2 90B'],
         docsUrl: 'https://ai.meta.com/llama/',
         signupUrl: 'https://ai.meta.com/resources/models-and-libraries/',
-        description: 'Open-source large language models'
+        description: 'LLaMA 4 with 1M token context (Apr 2025)'
     },
     {
         service: 'Mistral AI',
         key: 'mistral',
-        models: ['Mistral Large', 'Mistral Medium'],
+        models: ['Mistral Large 2', 'Mistral Medium'],
         docsUrl: 'https://docs.mistral.ai',
         signupUrl: 'https://console.mistral.ai/api-keys',
         pricingUrl: 'https://mistral.ai/pricing',
-        description: 'Efficient and powerful language models'
+        description: 'Mistral Large 2 with 123B params, 128k context'
     }
 ];
 
