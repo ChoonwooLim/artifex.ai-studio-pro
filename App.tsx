@@ -10,6 +10,7 @@ import StoryboardInputForm from './components/StoryboardInputForm';
 import StoryboardDisplay from './components/StoryboardDisplay';
 import DetailedStoryboardModal from './components/DetailedStoryboardModal';
 import VideoDisplay from './components/VideoDisplay';
+import ProfessionalStoryboardSettings from './components/ProfessionalStoryboardSettings';
 import ApiKeyInstructions from './components/ApiKeyInstructions';
 import ApiKeyManager from './components/ApiKeyManager';
 import SampleGalleryModal from './components/SampleGalleryModal';
@@ -39,6 +40,7 @@ import {
     VisualArtEffect,
 } from './types';
 import { aiService } from './services/aiService';
+import { professionalImageService, CharacterReference, StyleGuide } from './services/professionalImageService';
 import * as db from './services/db';
 import { useTranslation } from './i18n/LanguageContext';
 import { sampleProductsData, sampleStoryIdeasData } from './sampleData';
@@ -105,6 +107,31 @@ const App: React.FC = () => {
     const [storyboardPanels, setStoryboardPanels] = useState<StoryboardPanel[]>([]);
     const [isGeneratingStoryboard, setIsGeneratingStoryboard] = useState(false);
     const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+    
+    // Professional Mode State
+    const [isProfessionalMode, setIsProfessionalMode] = useState(true);
+    const [characters, setCharacters] = useState<CharacterReference[]>([]);
+    const [styleGuide, setStyleGuide] = useState<StyleGuide>({
+        cinematography: {
+            lighting: 'dramatic' as const,
+            colorGrading: 'cinematic' as const,
+            cameraAngle: 'eye level' as const,
+            depthOfField: 'shallow' as const,
+            aspectRatio: '2.39:1' as const
+        },
+        artDirection: {
+            artStyle: 'hyperrealistic' as const,
+            productionQuality: 'blockbuster' as const,
+            era: 'contemporary' as const,
+            mood: 'dramatic' as const
+        },
+        technicalSpecs: {
+            resolution: '8K' as const,
+            quality: 'maximum' as const,
+            renderEngine: 'unreal engine 5' as const,
+            postProcessing: ['color grading', 'film grain', 'chromatic aberration subtle']
+        }
+    });
     
     // Media Art Mode State
     const initialMediaArtState: MediaArtState = {
@@ -190,7 +217,42 @@ const App: React.FC = () => {
         setStoryboardPanels([]);
 
         try {
-            const prompt = `Generate a ${config.sceneCount}-scene storyboard for a ${config.videoLength} video.
+            if (isProfessionalMode && characters.length > 0) {
+                // Professional mode with character consistency
+                const prompt = `Generate a ${config.sceneCount}-scene storyboard for a ${config.videoLength} video.
+    - Idea: ${idea}
+    - Visual Style: ${config.visualStyle}
+    - Mood: ${config.mood}
+    - Language for descriptions: ${config.descriptionLanguage}
+    - Characters: ${characters.map(c => c.name).join(', ')}
+    
+    Return exactly ${config.sceneCount} scene descriptions. Each should be visual, cinematic, and include the characters where appropriate.`;
+                const storyboardText = await aiService.generateText({
+                    prompt,
+                    model: config.textModel,
+                    temperature: 0.8
+                });
+                const scenes = storyboardText.split('\n\n').filter(p => p.trim()).slice(0, config.sceneCount);
+                
+                // Use professional image service for consistent generation
+                const images = await professionalImageService.generateStoryboardWithConsistency(
+                    scenes,
+                    characters,
+                    styleGuide,
+                    config.imageModel
+                );
+                
+                const panels: StoryboardPanel[] = scenes.map((description, i) => ({
+                    description,
+                    imageUrl: images[i].startsWith('data:') || images[i].startsWith('http') 
+                        ? images[i] 
+                        : `data:image/jpeg;base64,${images[i]}`,
+                    isLoadingImage: false
+                }));
+                setStoryboardPanels(panels);
+            } else {
+                // Standard mode or professional mode without characters
+                const prompt = `Generate a ${config.sceneCount}-scene storyboard for a ${config.videoLength} video.
     - Idea: ${idea}
     - Visual Style: ${config.visualStyle}
     - Aspect Ratio: ${config.aspectRatio}
@@ -198,38 +260,54 @@ const App: React.FC = () => {
     - Language for descriptions: ${config.descriptionLanguage}
     
     Return exactly ${config.sceneCount} scene descriptions. Each should be visual, cinematic, and suitable for the specified mood and style.`;
-            const storyboardText = await aiService.generateText({
-                prompt,
-                model: config.textModel,
-                temperature: 0.8
-            });
-            const panels = storyboardText.split('\n\n').filter(p => p.trim()).slice(0, config.sceneCount).map(description => ({ description }));
-            const initialPanels: StoryboardPanel[] = panels.map(p => ({ ...p, isLoadingImage: true }));
-            setStoryboardPanels(initialPanels);
-            setIsGeneratingStoryboard(false);
+                const storyboardText = await aiService.generateText({
+                    prompt,
+                    model: config.textModel,
+                    temperature: 0.8
+                });
+                const panels = storyboardText.split('\n\n').filter(p => p.trim()).slice(0, config.sceneCount).map(description => ({ description }));
+                const initialPanels: StoryboardPanel[] = panels.map(p => ({ ...p, isLoadingImage: true }));
+                setStoryboardPanels(initialPanels);
+                setIsGeneratingStoryboard(false);
 
-            // Generate images sequentially
-            let currentPanels = [...initialPanels];
-            for (let i = 0; i < panels.length; i++) {
-                try {
-                    const imageUrls = await aiService.generateImage({
-                        prompt: panels[i].description,
-                        model: config.imageModel,
-                        aspectRatio: config.aspectRatio,
-                        count: 1
-                    });
-                    const imageBase64 = imageUrls[0];
-                    // Check if it's already a data URL or a placeholder URL
-                    const imageUrl = imageBase64.startsWith('data:') || imageBase64.startsWith('http') 
-                        ? imageBase64 
-                        : `data:image/jpeg;base64,${imageBase64}`;
-                    currentPanels[i] = { ...currentPanels[i], imageUrl, isLoadingImage: false };
-                } catch (imgErr: any) {
-                    console.error(`Image generation failed for panel ${i}:`, imgErr);
-                    const isQuotaError = imgErr.message?.includes('429');
-                    currentPanels[i] = { ...currentPanels[i], imageUrl: isQuotaError ? 'quota_error' : 'error', isLoadingImage: false };
+                // Generate images
+                let currentPanels = [...initialPanels];
+                for (let i = 0; i < panels.length; i++) {
+                    try {
+                        let imageUrls;
+                        if (isProfessionalMode) {
+                            // Use professional service even without characters
+                            imageUrls = await professionalImageService.generateProfessionalImage({
+                                prompt: panels[i].description,
+                                model: config.imageModel,
+                                styleGuide: styleGuide,
+                                qualitySettings: {
+                                    steps: 50,
+                                    cfgScale: 7.5,
+                                    upscale: true,
+                                    enhanceFaces: true
+                                }
+                            });
+                        } else {
+                            imageUrls = await aiService.generateImage({
+                                prompt: panels[i].description,
+                                model: config.imageModel,
+                                aspectRatio: config.aspectRatio,
+                                count: 1
+                            });
+                        }
+                        const imageBase64 = imageUrls[0];
+                        const imageUrl = imageBase64.startsWith('data:') || imageBase64.startsWith('http') 
+                            ? imageBase64 
+                            : `data:image/jpeg;base64,${imageBase64}`;
+                        currentPanels[i] = { ...currentPanels[i], imageUrl, isLoadingImage: false };
+                    } catch (imgErr: any) {
+                        console.error(`Image generation failed for panel ${i}:`, imgErr);
+                        const isQuotaError = imgErr.message?.includes('429');
+                        currentPanels[i] = { ...currentPanels[i], imageUrl: isQuotaError ? 'quota_error' : 'error', isLoadingImage: false };
+                    }
+                    setStoryboardPanels([...currentPanels]);
                 }
-                setStoryboardPanels([...currentPanels]);
             }
         } catch (e: any) {
             setError(e.message || t('errors.storyboardGeneration'));
@@ -248,13 +326,39 @@ const App: React.FC = () => {
         try {
             const prompt = `Generate a detailed 4-scene expansion of this scene: "${sceneDescription}".
     Language: ${storyboardConfig.descriptionLanguage}
-    Return exactly 4 detailed scene descriptions that expand on the original scene.`;
+    Return exactly 4 detailed scene descriptions that expand on the original scene. Do not use markdown formatting, headers, or numbering. Just provide clean text descriptions separated by line breaks.`;
             const detailedText = await aiService.generateText({
                 prompt,
                 model: storyboardConfig.textModel,
                 temperature: 0.8
             });
-            const newPanelsData = detailedText.split('\n\n').filter(p => p.trim()).slice(0, 4).map(description => ({ description }));
+            
+            // Clean the response from markdown and extract descriptions
+            const cleanedText = detailedText
+                .replace(/#{1,6}\s*/g, '') // Remove markdown headers
+                .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1') // Remove bold/italic markdown
+                .replace(/^\d+\.\s*/gm, '') // Remove numbered lists
+                .replace(/^[-*]\s*/gm, '') // Remove bullet points
+                .trim();
+            
+            // Split by double newlines or scene indicators
+            const descriptions = cleanedText
+                .split(/\n{2,}|(?=확장된 장면|Scene\s*\d+|Panel\s*\d+|장면\s*\d+)/i)
+                .map(text => text
+                    .replace(/^(확장된 장면|Scene|Panel|장면)\s*\d+[:.]?\s*/i, '') // Remove scene/panel prefixes
+                    .replace(/^[\s:]+/, '') // Remove leading colons and spaces
+                    .replace(/^(출발과 준비|팀원들의 첫 만남|준비 단계 완료|출발 직전)[:.]?\s*/, '') // Remove common Korean scene titles
+                    .trim()
+                )
+                .filter(text => text.length > 20) // Filter out too-short segments
+                .slice(0, 4); // Take exactly 4 scenes
+            
+            // Ensure we have exactly 4 descriptions
+            while (descriptions.length < 4) {
+                descriptions.push(`Extended scene ${descriptions.length + 1}: Continuation of the narrative`);
+            }
+            
+            const newPanelsData = descriptions.map(description => ({ description }));
             const newPanels: DetailedStoryboardPanel[] = newPanelsData.map(p => ({ ...p, isLoadingImage: true }));
             setDetailedModalPanels(newPanels);
             setIsDetailedModalLoading(false);
@@ -303,14 +407,32 @@ const App: React.FC = () => {
         setStoryboardPanels(panels);
 
         try {
-            const imageUrls = await aiService.generateImage({
-                prompt: panels[index].description,
-                model: storyboardConfig.imageModel,
-                aspectRatio: storyboardConfig.aspectRatio,
-                count: 1
-            });
+            let imageUrls;
+            if (isProfessionalMode) {
+                imageUrls = await professionalImageService.generateProfessionalImage({
+                    prompt: panels[index].description,
+                    model: storyboardConfig.imageModel,
+                    characters: characters,
+                    styleGuide: styleGuide,
+                    qualitySettings: {
+                        steps: 50,
+                        cfgScale: 7.5,
+                        upscale: true,
+                        enhanceFaces: true
+                    }
+                });
+            } else {
+                imageUrls = await aiService.generateImage({
+                    prompt: panels[index].description,
+                    model: storyboardConfig.imageModel,
+                    aspectRatio: storyboardConfig.aspectRatio,
+                    count: 1
+                });
+            }
             const imageBase64 = imageUrls[0];
-            panels[index].imageUrl = `data:image/jpeg;base64,${imageBase64}`;
+            panels[index].imageUrl = imageBase64.startsWith('data:') || imageBase64.startsWith('http')
+                ? imageBase64
+                : `data:image/jpeg;base64,${imageBase64}`;
         } catch (e) {
             panels[index].imageUrl = 'error';
         } finally {
@@ -510,13 +632,50 @@ const App: React.FC = () => {
                         {mode === AppMode.STORYBOARD && (
                             <div className="max-w-5xl mx-auto">
                                 {!storyboardPanels.length && !isGeneratingStoryboard && (
-                                    <StoryboardInputForm
-                                        onGenerate={handleGenerateStoryboard}
-                                        isLoading={isGeneratingStoryboard}
-                                        config={storyboardConfig}
-                                        setConfig={setStoryboardConfig}
-                                        onShowSampleGallery={() => handleShowSampleGallery('story')}
-                                    />
+                                    <>
+                                        <div className="flex justify-center mb-6">
+                                            <button
+                                                onClick={() => setIsProfessionalMode(!isProfessionalMode)}
+                                                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                                                    isProfessionalMode
+                                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                                }`}
+                                            >
+                                                {isProfessionalMode ? '🎬 Professional Mode' : '✨ Standard Mode'}
+                                            </button>
+                                        </div>
+                                        {isProfessionalMode ? (
+                                            <div className="mb-8">
+                                                <ProfessionalStoryboardSettings
+                                                    config={storyboardConfig}
+                                                    setConfig={setStoryboardConfig}
+                                                    characters={characters}
+                                                    setCharacters={setCharacters}
+                                                    styleGuide={styleGuide}
+                                                    setStyleGuide={setStyleGuide}
+                                                />
+                                                <div className="mt-6">
+                                                    <StoryboardInputForm
+                                                        onGenerate={handleGenerateStoryboard}
+                                                        isLoading={isGeneratingStoryboard}
+                                                        config={storyboardConfig}
+                                                        setConfig={setStoryboardConfig}
+                                                        onShowSampleGallery={() => handleShowSampleGallery('story')}
+                                                        hideSettings={true}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <StoryboardInputForm
+                                                onGenerate={handleGenerateStoryboard}
+                                                isLoading={isGeneratingStoryboard}
+                                                config={storyboardConfig}
+                                                setConfig={setStoryboardConfig}
+                                                onShowSampleGallery={() => handleShowSampleGallery('story')}
+                                            />
+                                        )}
+                                    </>
                                 )}
                                 {error && <p className="text-red-400 mt-4">{error}</p>}
                                 {(isGeneratingStoryboard || storyboardPanels.length > 0) && (

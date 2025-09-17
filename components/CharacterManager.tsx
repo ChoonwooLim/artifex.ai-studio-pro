@@ -282,7 +282,7 @@ const CharacterManager: React.FC<CharacterManagerProps> = ({ characters, onChara
                                     visualDetails: {...newCharacter.visualDetails, height: e.target.value}
                                 })}
                                 className="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600 focus:border-purple-500"
-                                placeholder="e.g., 6'2\" or tall"
+                                placeholder="e.g., 6'2'' or tall"
                             />
                         </div>
                         

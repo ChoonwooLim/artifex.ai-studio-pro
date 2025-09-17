@@ -75,7 +75,7 @@ export class ProfessionalImageService {
     private initializeDefaultStyleGuide() {
         this.currentStyleGuide = {
             cinematography: {
-                lighting: 'cinematic',
+                lighting: 'dramatic',
                 colorGrading: 'cinematic',
                 cameraAngle: 'eye level',
                 depthOfField: 'shallow',

@@ -10,9 +10,10 @@ interface StoryboardInputFormProps {
     config: StoryboardConfig;
     setConfig: (config: StoryboardConfig) => void;
     onShowSampleGallery: () => void;
+    hideSettings?: boolean;
 }
 
-const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, isLoading, config, setConfig, onShowSampleGallery }) => {
+const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, isLoading, config, setConfig, onShowSampleGallery, hideSettings = false }) => {
     const { t } = useTranslation();
     const [idea, setIdea] = useState('');
 
@@ -39,9 +40,11 @@ const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, i
                 />
             </div>
             
-            <div className="animate-fade-in">
-                <StoryboardSettings config={config} setConfig={setConfig} />
-            </div>
+            {!hideSettings && (
+                <div className="animate-fade-in">
+                    <StoryboardSettings config={config} setConfig={setConfig} />
+                </div>
+            )}
             
             <div className="pt-2 flex flex-col sm:flex-row gap-4">
                 <button
