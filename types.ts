@@ -72,6 +72,7 @@ export interface DescriptionConfig {
     targetAudience: string;
     tone: Tone;
     language: string;
+    selectedModel?: string;
 }
 
 export interface StoryboardConfig {

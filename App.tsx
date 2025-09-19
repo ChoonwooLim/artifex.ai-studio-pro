@@ -48,6 +48,7 @@ import {
     VisualArtEffect,
 } from './types';
 import * as geminiService from './services/geminiService';
+import { aiService } from './services/aiService';
 import * as db from './services/db';
 import { useTranslation } from './i18n/LanguageContext';
 import { sampleProductsData, sampleStoryIdeasData } from './sampleData';
@@ -72,6 +73,7 @@ const App: React.FC = () => {
         targetAudience: '',
         tone: Tone.FRIENDLY,
         language: 'English',
+        selectedModel: 'gemini-2.0-flash-exp',
     };
     const [descriptionConfig, setDescriptionConfig] = useState<DescriptionConfig>(initialDescriptionConfig);
     const [description, setDescription] = useState('');
@@ -162,7 +164,23 @@ const App: React.FC = () => {
         setError(null);
         setDescription('');
         try {
-            const result = await geminiService.generateDescription(descriptionConfig);
+            // Create prompt for description generation
+            const prompt = `Generate a product description for:
+                Product: ${descriptionConfig.productName}
+                Key Features: ${descriptionConfig.keyFeatures}
+                Target Audience: ${descriptionConfig.targetAudience}
+                Tone: ${descriptionConfig.tone}
+                Language: ${descriptionConfig.language}
+                
+                Please provide a compelling product description that highlights the key features and appeals to the target audience.`;
+
+            const result = await aiService.generateText({
+                prompt,
+                model: descriptionConfig.selectedModel || 'gemini-2.0-flash-exp',
+                temperature: 0.7,
+                maxTokens: 1000
+            });
+            
             setDescription(result);
         } catch (e: any) {
             setError(e.message || t('errors.descriptionGeneration'));

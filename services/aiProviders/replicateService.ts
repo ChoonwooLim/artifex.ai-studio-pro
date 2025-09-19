@@ -1,4 +1,5 @@
-import Replicate from 'replicate';
+// Dynamic import for Replicate to avoid build errors when package is not installed
+type Replicate = any;
 
 interface ImageGenerateOptions {
     prompt: string;
@@ -16,32 +17,49 @@ interface VideoGenerateOptions {
 
 export class ReplicateService {
     private client: Replicate | null = null;
+    private initialized = false;
 
     constructor() {
-        // Check environment variable first, then localStorage
-        const apiKey = import.meta.env.VITE_REPLICATE_API_KEY || localStorage.getItem('apiKey_replicate');
-        if (apiKey) {
-            this.client = new Replicate({
-                auth: apiKey
-            });
-        }
+        // Client will be initialized when needed
     }
 
-    isConfigured(): boolean {
-        return this.client !== null;
+    private async initClient() {
+        if (!this.initialized) {
+            const apiKey = import.meta.env.VITE_REPLICATE_API_KEY || localStorage.getItem('apiKey_replicate');
+            if (apiKey) {
+                try {
+                    // Dynamic import to avoid build errors when package is not installed
+                    const ReplicateModule = await import('replicate').catch(() => null);
+                    if (ReplicateModule) {
+                        const Replicate = ReplicateModule.default;
+                        this.client = new Replicate({
+                            auth: apiKey
+                        });
+                    }
+                } catch (error) {
+                    console.warn('Replicate SDK not available. Install with: npm install replicate');
+                }
+            }
+            this.initialized = true;
+        }
+        return this.client;
+    }
+
+    async isConfigured(): Promise<boolean> {
+        const client = await this.initClient();
+        return client !== null;
     }
 
     async generateImage(options: ImageGenerateOptions): Promise<string[]> {
-        if (!this.client) {
+        const client = await this.initClient();
+        
+        if (!client) {
             // Re-check environment variable and localStorage in case key was added after service initialization
             const currentKey = import.meta.env.VITE_REPLICATE_API_KEY || localStorage.getItem('apiKey_replicate');
-            if (currentKey) {
-                this.client = new Replicate({
-                    auth: currentKey
-                });
-            } else {
+            if (!currentKey) {
                 throw new Error('Replicate API key not configured. Please add your API key in the API Keys settings.');
             }
+            throw new Error('Replicate SDK not available. Please install it first: npm install replicate');
         }
 
         try {
@@ -87,7 +105,7 @@ export class ReplicateService {
                 num_inference_steps: 50
             };
 
-            const output = await this.client.run(
+            const output = await client.run(
                 `${selectedModel.model}:${selectedModel.version}`,
                 { input }
             );
@@ -111,16 +129,15 @@ export class ReplicateService {
     }
 
     async generateVideo(options: VideoGenerateOptions): Promise<string> {
-        if (!this.client) {
+        const client = await this.initClient();
+        
+        if (!client) {
             // Re-check environment variable and localStorage in case key was added after service initialization
             const currentKey = import.meta.env.VITE_REPLICATE_API_KEY || localStorage.getItem('apiKey_replicate');
-            if (currentKey) {
-                this.client = new Replicate({
-                    auth: currentKey
-                });
-            } else {
+            if (!currentKey) {
                 throw new Error('Replicate API key not configured. Please add your API key in the API Keys settings.');
             }
+            throw new Error('Replicate SDK not available. Please install it first: npm install replicate');
         }
 
         try {
@@ -157,7 +174,7 @@ export class ReplicateService {
                 input.seed = -1;
             }
 
-            const output = await this.client.run(
+            const output = await client.run(
                 `${selectedModel.model}:${selectedModel.version}`,
                 { input }
             );

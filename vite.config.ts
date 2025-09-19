@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         rollupOptions: {
+          external: ['replicate'],
           output: {
             manualChunks: {
               'react-vendor': ['react', 'react-dom'],

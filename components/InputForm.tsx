@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DescriptionConfig, Tone, SampleProduct } from '../types';
-import { TONE_OPTIONS, DESCRIPTION_LANGUAGE_OPTIONS } from '../constants';
+import { TONE_OPTIONS, DESCRIPTION_LANGUAGE_OPTIONS, TEXT_MODEL_OPTIONS } from '../constants';
 import { useTranslation } from '../i18n/LanguageContext';
 
 interface InputFormProps {
@@ -13,9 +13,38 @@ interface InputFormProps {
 
 const InputForm: React.FC<InputFormProps> = ({ config, setConfig, onGenerate, isLoading, onShowSampleGallery }) => {
     const { t } = useTranslation();
+    const [apiKeyStatus, setApiKeyStatus] = useState<{ [key: string]: boolean }>({});
+
+    useEffect(() => {
+        // Check API key status for each provider
+        const checkApiKeys = () => {
+            const status: { [key: string]: boolean } = {
+                google: !!(import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google')),
+                openai: !!(import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('apiKey_openai')),
+                anthropic: !!(import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('apiKey_anthropic')),
+                mistral: !!(import.meta.env.VITE_MISTRAL_API_KEY || localStorage.getItem('apiKey_mistral')),
+            };
+            setApiKeyStatus(status);
+        };
+        checkApiKeys();
+    }, []);
 
     const handleConfigChange = (field: keyof DescriptionConfig, value: string) => {
         setConfig({ ...config, [field]: value });
+    };
+
+    const getProviderFromModel = (model: string): string => {
+        const modelLower = model.toLowerCase();
+        if (modelLower.includes('gemini')) return 'google';
+        if (modelLower.includes('gpt') || modelLower.includes('o1')) return 'openai';
+        if (modelLower.includes('claude')) return 'anthropic';
+        if (modelLower.includes('mistral')) return 'mistral';
+        return 'google';
+    };
+
+    const isModelAvailable = (model: string): boolean => {
+        const provider = getProviderFromModel(model);
+        return apiKeyStatus[provider] || false;
     };
 
     return (
@@ -86,6 +115,37 @@ const InputForm: React.FC<InputFormProps> = ({ config, setConfig, onGenerate, is
                         {DESCRIPTION_LANGUAGE_OPTIONS.map(o => <option key={o.value} value={o.value} className="bg-slate-800">{o.label}</option>)}
                     </select>
                 </div>
+            </div>
+
+            <div>
+                <label htmlFor="model" className="block text-sm font-medium text-slate-300 mb-2">
+                    AI Model
+                    <span className="ml-2 text-xs text-slate-500">(Select your preferred AI model)</span>
+                </label>
+                <select
+                    id="model"
+                    value={config.selectedModel || 'gemini-2.0-flash-exp'}
+                    onChange={(e) => handleConfigChange('selectedModel', e.target.value)}
+                    className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                    {TEXT_MODEL_OPTIONS.map(model => {
+                        const available = isModelAvailable(model.value);
+                        const provider = getProviderFromModel(model.value);
+                        return (
+                            <option 
+                                key={model.value} 
+                                value={model.value} 
+                                disabled={!available}
+                                className={`bg-slate-800 ${!available ? 'text-slate-500' : ''}`}
+                            >
+                                {model.label} {!available && `(${provider} API key required)`}
+                            </option>
+                        );
+                    })}
+                </select>
+                <p className="mt-1 text-xs text-slate-500">
+                    {config.selectedModel && TEXT_MODEL_OPTIONS.find(m => m.value === config.selectedModel)?.description}
+                </p>
             </div>
 
             <div className="pt-2 flex flex-col sm:flex-row gap-4">

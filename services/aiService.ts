@@ -229,7 +229,7 @@ class AIService {
 
                 case 'replicate':
                     const replicateImg = await this.getReplicateService();
-                    if (!replicateImg.isConfigured()) {
+                    if (!(await replicateImg.isConfigured())) {
                         throw new Error('Replicate API key not configured. Please add your API key in settings.');
                     }
                     return await replicateImg.generateImage(options);
@@ -263,7 +263,7 @@ class AIService {
                 }
                 // Try Replicate if available
                 const replicateService = await this.getReplicateService();
-                if (replicateService.isConfigured()) {
+                if (await replicateService.isConfigured()) {
                     console.log('Falling back to Replicate for image generation');
                     return await replicateService.generateImage({
                         ...options,
@@ -292,7 +292,7 @@ class AIService {
         
         // Try Replicate if configured
         const replicateSvc = await this.getReplicateService();
-        if (replicateSvc.isConfigured()) {
+        if (await replicateSvc.isConfigured()) {
             console.log('Redirecting to Replicate service');
             return await replicateSvc.generateImage({
                 ...options,
@@ -313,7 +313,7 @@ class AIService {
         try {
             if (provider === 'replicate') {
                 const replicateVid = await this.getReplicateService();
-                if (!replicateVid.isConfigured()) {
+                if (!(await replicateVid.isConfigured())) {
                     throw new Error('Replicate API key not configured. Please add your API key in settings.');
                 }
                 return await replicateVid.generateVideo(options);
