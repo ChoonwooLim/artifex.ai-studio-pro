@@ -101,12 +101,19 @@ npm run ai-model-report  # 상세 보고서 생성
 │ • Claude │ • Stable │ • Pika           │
 │ • Gemini │ • Flux   │ • Luma           │
 │ • Mistral│ • Midjourney│ • Stability   │
+│          │ • Imagen 4  │ • Veo 2/3     │
+│          │             │ • Sora Turbo  │
+│          │             │ • Wan2.2 (로컬)│
 └──────────┴──────────┴──────────────────┘
 ```
 
 ### 데이터 흐름
 ```
-User Input → Model Selection → API Router → Provider Service → Response → UI Update
+클라우드 모델:
+User Input → Model Selection → API Router → Cloud Provider Service → Response → UI Update
+
+로컬 모델:
+User Input → Model Selection → API Router → Local Model Service → GPU Execution → Response → UI Update
 ```
 
 ---
@@ -126,6 +133,8 @@ User Input → Model Selection → API Router → Provider Service → Response 
 | **Replicate** | https://replicate.com/docs/models | https://replicate.com/docs/reference | https://replicate.com/changelog |
 | **Cohere** | https://cohere.com/models | https://docs.cohere.com/reference | https://cohere.com/changelog |
 | **Hugging Face** | https://huggingface.co/models | https://huggingface.co/docs/api-inference | https://huggingface.co/docs/hub/changelog |
+| **Pika Labs** | https://pika.art/docs | https://docs.pika.art/api | https://pika.art/updates |
+| **Luma AI** | https://lumalabs.ai/docs | https://docs.lumalabs.ai/api | https://lumalabs.ai/changelog |
 
 ---
 
@@ -184,16 +193,83 @@ User Input → Model Selection → API Router → Provider Service → Response 
 | SVD 1.1 | stable-video-1.1 | [CHECK] | 2024-06-01 | ✅ | 4초 | |
 | **Luma AI** |
 | Dream Machine | dream-machine-1.5 | [CHECK] | 2024-09-01 | ✅ | 5초 | |
+| Ray 2 | luma-ray-2 | [CHECK] | 2025-02-01 | ✅ | 10초 | 리얼리즘 |
+| **OpenAI** |
+| Sora Turbo | sora-turbo | [CHECK] | 2024-12-09 | ✅ | 20초 | ChatGPT Plus/Pro |
+| **Google** |
+| Veo 2 | veo-2 | [CHECK] | 2024-12-01 | ✅ | 60초 | 4K, 향상된 물리 |
+| Veo 3 | veo-3 | [CHECK] | 2025-05-01 | ✅ | 60초 | 4K, 오디오 지원 |
+| **Pika** |
+| Pika 2.1 | pika-2.1 | [CHECK] | 2025-01-01 | ✅ | 10초 | 1080p |
+| Pika 2.2 | pika-2.2 | [CHECK] | 2025-03-01 | ✅ | 10초 | 1080p, 향상된 품질 |
+| **로컬 모델** |
+| Wan2.2 | wan-2.2-local | N/A | 2024-12-29 | ✅ | 제한없음 | MoE, 19GB, RTX 4090 |
 
 ### 상태 범례
 - ✅ 최신 버전 통합됨
 - 🔄 업데이트 필요
 - ⚠️ Deprecated 예정
 - ❌ 지원 중단됨
+- 🖥️ 로컬 모델 (GPU 필요)
+
+---
+
+## 로컬 모델 통합 아키텍처
+
+### Wan2.2 모델 개요
+- **모델명**: Wan2.2 (完 - 완벽/완성의 의미)
+- **크기**: 19.16GB
+- **아키텍처**: MoE (Mixture of Experts) 기반
+- **입력**: Text/Image to Video
+- **출력**: 720P @ 24fps 비디오
+- **요구사항**: RTX 4090 이상 GPU (24GB VRAM)
+- **특징**: 
+  - 로컬 실행으로 API 비용 없음
+  - 무제한 생성 가능
+  - 오프라인 작동
+  - 빠른 응답 속도
+
+### 로컬 모델 실행 아키텍처
+```
+┌─────────────────────────────────────────┐
+│         Local Model Manager              │
+├─────────────────────────────────────────┤
+│  • Model Loading & Caching               │
+│  • GPU Memory Management                 │
+│  • Queue Management                      │
+│  • Progress Tracking                     │
+├─────────────────────────────────────────┤
+│         Wan2.2 Executor                 │
+├─────────────────────────────────────────┤
+│  • PyTorch Runtime                      │
+│  • CUDA Optimization                    │
+│  • Batch Processing                     │
+│  • Output Encoding                      │
+└─────────────────────────────────────────┘
+```
+
+### 통합 전략
+1. **하이브리드 접근법**: 클라우드와 로컬 모델 모두 지원
+2. **자동 감지**: GPU 가용성 확인 후 로컬 모델 활성화
+3. **폴백 메커니즘**: 로컬 실패 시 클라우드 모델로 전환
+4. **UI 차별화**: 로컬 모델은 특별 표시 (🖥️ 아이콘)
 
 ---
 
 ## 구현 로드맵
+
+### Phase 0: 로컬 모델 준비 (1일)
+#### Day 0
+- [ ] GPU 환경 확인 및 CUDA 설정
+- [ ] Python 백엔드 서비스 설정
+- [ ] Wan2.2 모델 파일 로드 테스트
+- [ ] 로컬 모델 실행 API 엔드포인트 구축
+  ```bash
+  # Python 환경 설정
+  pip install torch torchvision transformers
+  pip install fastapi uvicorn
+  pip install python-multipart
+  ```
 
 ### Phase 1: 기초 구조 설정 (2일)
 #### Day 1
@@ -327,12 +403,19 @@ artifex.ai-studio-pro/
 │   │   │       ├── runway.ts
 │   │   │       ├── pika.ts
 │   │   │       ├── stability-video.ts
-│   │   │       └── luma.ts
+│   │   │       ├── luma.ts
+│   │   │       ├── sora.ts
+│   │   │       ├── veo.ts
+│   │   │       └── local/
+│   │   │           ├── wan22.ts
+│   │   │           └── localModelManager.ts
 │   │   ├── core/
 │   │   │   ├── aiRouter.ts
 │   │   │   ├── apiKeyManager.ts
 │   │   │   ├── modelRegistry.ts
-│   │   │   └── modelUpdateChecker.ts
+│   │   │   ├── modelUpdateChecker.ts
+│   │   │   ├── localModelDetector.ts
+│   │   │   └── gpuManager.ts
 │   │   └── [existing services...]
 │   ├── types/
 │   │   ├── models.ts
@@ -345,11 +428,20 @@ artifex.ai-studio-pro/
 ├── scripts/
 │   ├── checkModelUpdates.ts
 │   ├── generateModelDocs.ts
-│   └── updateModelRegistry.ts
+│   ├── updateModelRegistry.ts
+│   └── localModelServer/
+│       ├── server.py
+│       ├── wan22_inference.py
+│       └── requirements.txt
 ├── docs/
 │   ├── AI_MODEL_INTEGRATION_PLAN.md (this file)
 │   ├── MODEL_CHANGELOG.md
 │   └── API_INTEGRATION_GUIDE.md
+├── Models/         # 로컬 모델 파일 (.gitignore됨)
+│   └── wan2.2/
+│       ├── model.safetensors
+│       ├── config.json
+│       └── tokenizer.json
 ├── .env
 ├── .env.example
 ├── package.json
@@ -461,10 +553,111 @@ export class GoogleGeminiService {
 }
 ```
 
+### 로컬 모델 통합 (Wan2.2)
+
+#### Python 백엔드 서버
+```python
+# scripts/localModelServer/server.py
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import base64
+import uuid
+from typing import Optional
+from wan22_inference import Wan22Model
+
+app = FastAPI(title="Wan2.2 Local Model Server")
+
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 모델 초기화
+model = Wan22Model()
+
+class VideoGenerationRequest(BaseModel):
+    prompt: str
+    image_base64: Optional[str] = None
+    duration: float = 3.0
+    fps: int = 24
+    resolution: tuple = (1280, 720)
+
+@app.post("/generate")
+async def generate_video(request: VideoGenerationRequest):
+    """비동기 비디오 생성 시작"""
+    task_id = str(uuid.uuid4())
+    # 실제 생성 로직 구현
+    return {"task_id": task_id, "status": "processing"}
+
+@app.get("/health")
+async def health_check():
+    """서버 상태 확인"""
+    return {
+        "status": "healthy",
+        "gpu_available": torch.cuda.is_available(),
+        "model_loaded": model is not None
+    }
+```
+
+#### TypeScript 클라이언트
+```typescript
+// services/providers/video/local/wan22.ts
+export class Wan22LocalService {
+  private baseURL = 'http://localhost:8000';
+  private isAvailable = false;
+  
+  constructor() {
+    this.checkAvailability();
+  }
+  
+  async checkAvailability(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseURL}/health`);
+      const data = await response.json();
+      this.isAvailable = data.gpu_available && data.model_loaded;
+      return this.isAvailable;
+    } catch {
+      this.isAvailable = false;
+      return false;
+    }
+  }
+  
+  async generateVideo(
+    prompt: string,
+    image?: string,
+    config?: VideoGenerationConfig
+  ): Promise<string> {
+    if (!this.isAvailable) {
+      throw new Error('Wan2.2 local model is not available');
+    }
+    
+    const response = await fetch(`${this.baseURL}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        image_base64: image,
+        duration: config?.duration || 3.0
+      })
+    });
+    
+    const data = await response.json();
+    return await this.pollForResult(data.task_id);
+  }
+}
+```
+
 ### AI Router 통합
 
 ```typescript
 // services/core/aiRouter.ts
+import { Wan22LocalService } from '../providers/video/local/wan22';
+
 export class AIRouter {
   private static providers = new Map<string, any>();
   

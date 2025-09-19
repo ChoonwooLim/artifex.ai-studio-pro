@@ -1,4 +1,20 @@
-# Claude Code Development Guidelines
+# ARTIFEX.AI STUDIO PRO - 종합 프로젝트 개발 가이드
+
+## 🚀 프로젝트 개요
+
+**프로젝트명**: Artifex.AI Studio Pro  
+**버전**: 0.0.0  
+**타입**: AI 기반 멀티미디어 콘텐츠 생성 플랫폼  
+**기술 스택**: React 19 + TypeScript + Vite + Google Generative AI
+
+### 핵심 가치
+- 🎨 **창의적 AI 콘텐츠 생성**: Text, Image, Video, Art
+- 🎬 **전문가급 스토리보드**: 영화/광고 제작용 시각화
+- 🖼️ **미디어 아트**: AI 기반 예술 작품 생성
+- 🎭 **비주얼 아트**: 유명 작품 스타일 변환
+- 🌍 **다국어 지원**: 한국어/영어 완벽 지원
+
+---
 
 ## ⏰ 날짜 및 시간대 인식
 
@@ -16,6 +32,93 @@ date '+%Y년 %m월 %d일 %A'
 - 환경 변수의 날짜가 아닌 실제 시스템 날짜를 사용
 - 모든 문서 작성 시 현재 날짜 확인 후 기록
 - 한국 시간대(KST) 기준으로 작업
+
+---
+
+## 🏗️ 기술 아키텍처
+
+### Frontend Architecture
+```mermaid
+graph TD
+    A[React App] --> B[Components Layer]
+    B --> C[Services Layer]
+    C --> D[AI Providers]
+    D --> E[Google Gemini]
+    D --> F[OpenAI]
+    D --> G[Anthropic]
+    D --> H[Local Models]
+    
+    B --> I[State Management]
+    I --> J[Local State]
+    I --> K[IndexedDB]
+    
+    B --> L[UI Components]
+    L --> M[Input Forms]
+    L --> N[Display Components]
+    L --> O[Modals & Dialogs]
+```
+
+### Core Modules
+1. **Components (31개)**: UI 컴포넌트 라이브러리
+2. **Services (12개)**: 비즈니스 로직 및 AI 통합
+3. **AI Providers**: 다중 AI 제공자 통합
+4. **Database**: IndexedDB 기반 로컬 저장소
+5. **Internationalization**: 다국어 지원 시스템
+
+### 프로젝트 구조
+```
+artifex.ai-studio-pro/
+├── App.tsx                      # 메인 애플리케이션
+├── components/                  # React 컴포넌트
+│   ├── storyboard/             # 스토리보드 관련
+│   ├── icons/                  # 아이콘 컴포넌트
+│   └── ...                     # 기타 UI 컴포넌트
+├── services/                    # 비즈니스 로직
+│   ├── aiProviders/            # AI 제공업체별 서비스
+│   ├── geminiService.ts        # Google Gemini 통합
+│   ├── db.ts                   # IndexedDB 관리
+│   └── ...                     # 기타 서비스
+├── i18n/                       # 다국어 지원
+│   └── translations/           # 번역 파일
+├── docs/
+│   └── ai-models/              # AI 모델 문서
+│       ├── AI_MODEL_INTEGRATION_PLAN.md
+│       └── MODEL_CHANGELOG.md
+├── scripts/                    # 유틸리티 스크립트
+└── Models/                     # 로컬 AI 모델 (gitignored)
+```
+
+---
+
+## 📊 현재 구현 상태
+
+### ✅ 완료된 기능
+- **Description Mode**: 제품 설명 자동 생성
+- **Storyboard Mode**: 시나리오 기반 스토리보드 생성
+- **Media Art Mode**: AI 기반 미디어 아트 생성
+- **Visual Art Mode**: 예술 작품 스타일 변환
+- **Google Gemini 2.0 Flash**: 최신 모델 통합
+- **다국어 지원**: 한국어/영어 전환
+- **프로젝트 관리**: 로컬 DB 저장/불러오기
+- **갤러리**: 샘플 및 생성 작품 관리
+
+### 🔄 진행 중
+- **OpenAI GPT-5 통합**: 최신 플래그십 모델
+- **Anthropic Claude 4 통합**: Opus 4.1, Sonnet 4
+- **Wan2.2 로컬 모델**: 오프라인 비디오 생성
+- **Professional Mode**: 전문가용 고급 기능
+- **Character Consistency**: 캐릭터 일관성 유지
+- **Style Guide Manager**: 스타일 가이드 관리
+
+### ❌ 미구현
+- **Video Generation**: 실제 비디오 생성
+- **Audio Integration**: 음성/음악 통합
+- **Cloud Storage**: 클라우드 저장소 연동
+- **Collaboration**: 다중 사용자 협업
+- **Export Options**: 다양한 포맷 내보내기
+- **Payment System**: 결제 시스템 통합
+
+---
 
 ## 🚨 개발 시작 전 필수 확인사항
 
@@ -45,6 +148,47 @@ cat docs/ai-models/MODEL_CHANGELOG.md | head -30
 4. **가격 변경**: 비용 구조 변경 확인
 5. **신규 기능**: 새로운 파라미터나 기능 확인
 6. **Deprecation**: 지원 중단 예정 모델 확인
+
+---
+
+## 🎯 개발 우선순위 및 로드맵
+
+### Phase 1: Core AI Integration (1-2주)
+```mermaid
+gantt
+    title AI Integration Roadmap
+    dateFormat YYYY-MM-DD
+    section Text AI
+    OpenAI GPT-5 통합          :2025-09-21, 3d
+    Anthropic Claude 4 통합     :2025-09-24, 3d
+    Mistral 통합               :2025-09-27, 2d
+    section Image AI
+    DALL-E 3 통합              :2025-09-29, 2d
+    Stable Diffusion 통합       :2025-10-01, 3d
+    section Video AI
+    Sora Turbo API 연동        :2025-10-04, 3d
+    Veo 3 통합                 :2025-10-07, 3d
+```
+
+### Phase 2: Professional Features (2-3주)
+- [ ] Professional Storyboard Creator 완성
+- [ ] Character Consistency Engine 구현
+- [ ] Style Guide Manager 고도화
+- [ ] Advanced Prompt Engineering
+- [ ] Batch Processing 시스템
+
+### Phase 3: Local Model Integration (1주)
+- [ ] Wan2.2 Python 서버 구축
+- [ ] GPU 자동 감지 시스템
+- [ ] 하이브리드 모드 구현
+- [ ] 성능 최적화
+
+### Phase 4: Production Ready (2-3주)
+- [ ] 전체 테스트 스위트 구축
+- [ ] 성능 최적화 및 코드 정리
+- [ ] 보안 감사 및 취약점 수정
+- [ ] 문서화 완성
+- [ ] 배포 파이프라인 구축
 
 ---
 
@@ -123,32 +267,19 @@ flowchart TD
 
 ---
 
-## 🏗️ Project Structure
-
-```
-artifex.ai-studio-pro/
-├── claude.md                     # 이 파일 (루트에 유지)
-├── docs/
-│   ├── ai-models/
-│   │   ├── AI_MODEL_INTEGRATION_PLAN.md  # 마스터 플랜
-│   │   └── MODEL_CHANGELOG.md            # 변경 이력
-│   └── project/
-│       └── README.md                      # 프로젝트 설명
-├── services/
-│   ├── providers/               # AI 제공업체별 서비스
-│   │   ├── text/               # Text AI
-│   │   ├── image/              # Image AI
-│   │   └── video/              # Video AI
-│   └── core/                   # 핵심 서비스
-│       ├── aiRouter.ts         # AI 라우터
-│       └── modelUpdateChecker.ts # 모델 업데이트 체커
-└── scripts/
-    └── checkModelUpdates.ts    # 자동 체크 스크립트
-```
-
----
-
 ## 🚀 Quick Commands
+
+### 개발 명령어
+```bash
+# 개발 서버 실행
+npm run dev
+
+# 빌드
+npm run build
+
+# 프리뷰
+npm run preview
+```
 
 ### AI 모델 관련 명령어
 ```bash
@@ -170,16 +301,13 @@ npm run update-sdks
 # 상세 보고서 생성
 npm run ai-model-report
 
-# 개발 서버 실행
-npm run dev
-
 # 테스트 실행
 npm test
 ```
 
 ---
 
-## 📊 현재 통합 상태
+## 📊 AI 모델 통합 현황
 
 ### Text AI (확인된 최신 모델 - 2025년 9월 20일)
 - ✅ Gemini 2.0 Flash (기본 통합 완료)
@@ -201,6 +329,7 @@ npm test
 - ✅ OpenAI Sora Turbo (2024년 12월 출시) - ChatGPT Plus/Pro에서 사용 가능
 - ✅ Google Veo 3 (2025년 5월 출시) - 오디오 지원, 4K
 - ✅ Google Veo 2 (2024년 12월 출시) - 4K, 향상된 물리
+- ✅ Wan2.2 로컬 모델 - 19GB, MoE, RTX 4090
 - ✅ Pika 2.2/2.1 - 1080p, 10초 비디오
 - ✅ Luma Ray 2 - 리얼리즘 벤치마크
 - 🔄 Runway Gen-3 Alpha (통합 예정)
@@ -227,6 +356,24 @@ VITE_REPLICATE_API_KEY=...
 2. .env 파일은 .gitignore에 추가
 3. 프로덕션에서는 환경 변수 사용
 4. 정기적으로 키 로테이션
+
+---
+
+## 💼 비즈니스 모델 및 수익화
+
+### 수익 모델
+1. **Freemium**: 기본 기능 무료, 고급 기능 유료
+2. **API Credits**: AI API 사용량 기반 과금
+3. **Pro Subscription**: 월간/연간 구독
+4. **Enterprise**: 기업용 맞춤 솔루션
+5. **Local Model License**: 로컬 모델 라이센스 판매
+
+### 타겟 시장
+- **콘텐츠 크리에이터**: 유튜버, 블로거
+- **광고 대행사**: 스토리보드 제작
+- **영화 제작사**: 프리 프로덕션
+- **교육 기관**: 창의적 학습 도구
+- **기업 마케팅팀**: 제품 홍보 콘텐츠
 
 ---
 
@@ -329,7 +476,7 @@ npm run test:e2e
 
 ### 예시
 ```
-feat(ai): Add OpenAI GPT-4o integration
+feat(ai): Add OpenAI GPT-5 integration
 
 - Implemented OpenAI service provider
 - Added model selection in UI
@@ -366,6 +513,25 @@ Error: CORS policy blocked
 **해결**: 
 - 백엔드 프록시 설정
 - API 직접 호출 대신 서버 경유
+
+---
+
+## 🚀 즉시 실행 가능한 작업
+
+### Today (2025-09-20)
+- [ ] OpenAI Service 구현 시작
+- [ ] API 키 관리 UI 개선
+- [ ] Professional Mode UI 프로토타입
+
+### This Week
+- [ ] 3개 이상 AI 제공자 통합 완료
+- [ ] Character Consistency 알고리즘 설계
+- [ ] 테스트 커버리지 50% 달성
+
+### This Month
+- [ ] 전체 AI 모델 통합 완료
+- [ ] Professional Features 구현
+- [ ] Beta 버전 출시 준비
 
 ---
 
@@ -409,5 +575,6 @@ Error: CORS policy blocked
 
 ---
 
-*이 문서는 개발자가 프로젝트를 재시작할 때마다 참조해야 할 핵심 가이드입니다.*
+*이 문서는 Artifex.AI Studio Pro의 핵심 개발 가이드입니다.*
+*개발자는 프로젝트 시작 시 이 문서를 참조하여 전체 맥락을 파악해야 합니다.*
 *최종 업데이트: 2025년 9월 20일 토요일*
