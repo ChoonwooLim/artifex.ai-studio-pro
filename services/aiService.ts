@@ -3,6 +3,7 @@ import { OpenAIService } from './aiProviders/openaiService';
 import { AnthropicService } from './aiProviders/anthropicService';
 import { XAIService } from './aiProviders/xaiService';
 import { ReplicateService } from './aiProviders/replicateService';
+import { MistralService } from './aiProviders/mistralService';
 
 interface GenerateTextOptions {
     prompt: string;
@@ -31,6 +32,7 @@ class AIService {
     private anthropicService: AnthropicService;
     private xaiService: XAIService;
     private replicateService: ReplicateService;
+    private mistralService: MistralService;
     private googleGenAI: GoogleGenerativeAI | null = null;
 
     constructor() {
@@ -38,6 +40,7 @@ class AIService {
         this.anthropicService = new AnthropicService();
         this.xaiService = new XAIService();
         this.replicateService = new ReplicateService();
+        this.mistralService = new MistralService();
 
         // Check environment variable first, then localStorage
         const geminiKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google');
@@ -64,6 +67,11 @@ class AIService {
             return 'xai';
         }
         
+        // Mistral models
+        if (modelLower.includes('mistral') || modelLower.includes('mixtral') || modelLower.includes('codestral')) {
+            return 'mistral';
+        }
+        
         // Google models
         if (modelLower.includes('gemini') || modelLower.includes('palm')) {
             return 'google';
@@ -79,7 +87,6 @@ class AIService {
             modelLower.includes('cogvideo') || modelLower.includes('animate') ||
             modelLower.includes('zeroscope') || modelLower.includes('modelscope') ||
             modelLower.includes('video-crafter') || modelLower.includes('llama') ||
-            modelLower.includes('mistral') || modelLower.includes('mixtral') ||
             modelLower.includes('qwen') || modelLower.includes('deepseek') ||
             modelLower.includes('command')) {
             return 'replicate';
@@ -112,6 +119,12 @@ class AIService {
                         throw new Error('xAI API key not configured. Please add your API key in settings.');
                     }
                     return await this.xaiService.generateText(options);
+
+                case 'mistral':
+                    if (!this.mistralService.isConfigured()) {
+                        throw new Error('Mistral API key not configured. Please add your API key in settings.');
+                    }
+                    return await this.mistralService.generateText(options);
 
                 case 'google':
                 default:

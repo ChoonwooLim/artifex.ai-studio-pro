@@ -41,10 +41,16 @@ export class AnthropicService {
 
         try {
             const modelMap: { [key: string]: string } = {
-                'claude-opus-4.1': 'claude-3-opus-20240229',
-                'claude-sonnet-4.0': 'claude-3-5-sonnet-20241022',
-                'claude-haiku-4.0': 'claude-3-haiku-20240307',
+                // Claude 4 series (September 2025)
+                'claude-opus-4.1': 'claude-opus-4.1-20250805',
+                'claude-sonnet-4.0': 'claude-sonnet-4-20250805',
+                'claude-haiku-4.0': 'claude-haiku-4-20250805',
+                // Claude 3.7 series (February 2025)
+                'claude-3.7-sonnet': 'claude-3.7-sonnet-20250205',
+                // Claude 3.5 series
                 'claude-3.5-sonnet': 'claude-3-5-sonnet-20241022',
+                'claude-3.5-haiku': 'claude-3-5-haiku-20241022',
+                // Claude 3 series
                 'claude-3-opus': 'claude-3-opus-20240229',
                 'claude-3-sonnet': 'claude-3-sonnet-20240229',
                 'claude-3-haiku': 'claude-3-haiku-20240307'

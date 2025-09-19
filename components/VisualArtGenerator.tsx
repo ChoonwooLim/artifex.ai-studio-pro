@@ -1,9 +1,10 @@
-import React from 'react';
-import { VisualArtState, VisualArtEffect, MediaArtSourceImage } from '../types';
+import React, { useState } from 'react';
+import { VisualArtState, VisualArtEffect, MediaArtSourceImage, VisualArtConfig } from '../types';
 import { VISUAL_ART_EFFECT_OPTIONS } from '../constants';
 import LoadingSpinner from './LoadingSpinner';
 import { useTranslation } from '../i18n/LanguageContext';
 import ImageUploader from './ImageUploader';
+import VisualArtSettings from './VisualArtSettings';
 
 interface VisualArtGeneratorProps {
     state: VisualArtState;
@@ -13,10 +14,11 @@ interface VisualArtGeneratorProps {
 
 const VisualArtGenerator: React.FC<VisualArtGeneratorProps> = ({ state, setState, onGenerate }) => {
     const { t } = useTranslation();
-    const { inputText, effect, resultVideoUrl, isLoading, error, sourceImage } = state;
+    const { inputText, config, resultVideoUrl, isLoading, error, sourceImage } = state;
+    const [showSettings, setShowSettings] = useState(false);
 
-    const handleEffectChange = (newEffect: VisualArtEffect) => {
-        setState(s => ({ ...s, effect: newEffect }));
+    const handleConfigChange = (newConfig: VisualArtConfig) => {
+        setState(s => ({ ...s, config: newConfig }));
     };
     
     const handleImageSelect = (image: MediaArtSourceImage) => {
@@ -72,23 +74,31 @@ const VisualArtGenerator: React.FC<VisualArtGeneratorProps> = ({ state, setState
                 </div>
             </div>
 
-            <div className="animate-fade-in space-y-8">
-                {/* Effect Selection */}
-                <div className="space-y-4">
-                     <label className="block text-sm font-medium text-slate-300 text-center">{t('visualArt.styleTitle')}</label>
-                     <div className="flex flex-wrap justify-center gap-3">
-                        {VISUAL_ART_EFFECT_OPTIONS.map(option => (
-                            <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => handleEffectChange(option.value)}
-                                className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 text-left text-sm ${effect === option.value ? 'bg-purple-500/20 border-purple-500' : 'bg-slate-700/50 border-slate-600 hover:border-slate-500'}`}
-                            >
-                                <span className="font-semibold text-slate-200">{t(`visualArtEffects.${option.labelKey}`)}</span>
-                            </button>
-                        ))}
-                    </div>
+            {/* Advanced Settings Toggle */}
+            <div className="flex justify-center">
+                <button
+                    type="button"
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                    <span className="flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {showSettings ? t('visualArt.hideSettings') : t('visualArt.showSettings')}
+                    </span>
+                </button>
+            </div>
+
+            {showSettings && (
+                <div className="animate-fade-in">
+                    <VisualArtSettings config={config} setConfig={handleConfigChange} />
                 </div>
+            )}
+
+            <div className="animate-fade-in space-y-8">
                 
                 {/* Generate Button */}
                 <div className="pt-2">

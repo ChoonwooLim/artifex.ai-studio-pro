@@ -34,6 +34,7 @@ import {
     MediaArtStyle,
     MediaArtSourceImage,
     VisualArtState,
+    VisualArtConfig,
     VisualArtEffect,
 } from './types';
 import * as geminiService from './services/geminiService';
@@ -98,10 +99,22 @@ const App: React.FC = () => {
     const [mediaArtError, setMediaArtError] = useState<string | null>(null);
 
     // Visual Art Mode State
+    const initialVisualArtConfig: VisualArtConfig = {
+        effect: VisualArtEffect.GLITCH,
+        textModel: 'gemini-2.5-flash',
+        imageModel: 'dall-e-3',
+        videoModel: 'veo-2.0-generate-001',
+        temperature: 0.7,
+        quality: 'hd',
+        outputFormat: 'video',
+        duration: 5,
+        style: 'artistic',
+        aspectRatio: AspectRatio.LANDSCAPE,
+    };
     const initialVisualArtState: VisualArtState = {
         inputText: '',
         sourceImage: null,
-        effect: VisualArtEffect.GLITCH,
+        config: initialVisualArtConfig,
         resultVideoUrl: null,
         isLoading: false,
         error: null,

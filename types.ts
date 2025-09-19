@@ -207,10 +207,23 @@ export interface MediaArtState {
     config: StoryboardConfig;
 }
 
+export interface VisualArtConfig {
+    effect: VisualArtEffect;
+    textModel: string;
+    imageModel: string;
+    videoModel: string;
+    temperature: number;
+    quality: 'standard' | 'hd' | 'ultra';
+    outputFormat: 'video' | 'image' | 'gif';
+    duration: number;
+    style: string;
+    aspectRatio: AspectRatio;
+}
+
 export interface VisualArtState {
     inputText: string;
     sourceImage: MediaArtSourceImage | null;
-    effect: VisualArtEffect;
+    config: VisualArtConfig;
     resultVideoUrl: string | null;
     isLoading: boolean;
     error: string | null;

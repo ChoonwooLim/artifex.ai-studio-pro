@@ -57,15 +57,60 @@ export const DESCRIPTION_LANGUAGE_OPTIONS: { value: string; label: string }[] = 
 ];
 
 export const TEXT_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, multimodal, and cost-effective for most tasks.' },
+    // Google Models
+    { value: 'gemini-2.5-flash', label: '🔷 Gemini 2.5 Flash', description: 'Fast, multimodal, and cost-effective for most tasks.' },
+    { value: 'gemini-2.0-flash-exp', label: '🔷 Gemini 2.0 Flash Exp', description: 'Experimental version with enhanced capabilities.' },
+    { value: 'gemini-1.5-pro', label: '🔷 Gemini 1.5 Pro', description: 'Advanced reasoning and long-context understanding.' },
+    
+    // OpenAI Models  
+    { value: 'gpt-5', label: '🟢 GPT-5 (Preview)', description: 'OpenAI\'s flagship model - Most advanced reasoning (Limited access).' },
+    { value: 'gpt-4o', label: '🟢 GPT-4o', description: 'Optimized GPT-4 with vision capabilities.' },
+    { value: 'gpt-4o-mini', label: '🟢 GPT-4o Mini', description: 'Lightweight version of GPT-4o.' },
+    { value: 'o1-preview', label: '🟢 o1 Preview', description: 'Advanced reasoning model for complex tasks.' },
+    { value: 'o1-mini', label: '🟢 o1 Mini', description: 'Smaller, faster version of o1.' },
+    
+    // Anthropic Models
+    { value: 'claude-4-opus', label: '🔴 Claude 4 Opus', description: 'Most powerful Claude model for complex tasks.' },
+    { value: 'claude-4-sonnet', label: '🔴 Claude 4 Sonnet', description: 'Balanced performance and speed.' },
+    { value: 'claude-3.7-sonnet', label: '🔴 Claude 3.7 Sonnet', description: 'Latest Sonnet release with improvements.' },
+    { value: 'claude-3.5-haiku', label: '🔴 Claude 3.5 Haiku', description: 'Fast and efficient for simple tasks.' },
 ];
 
 export const IMAGE_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    { value: 'imagen-4.0-generate-001', label: 'Imagen 4.0', description: 'Google\'s most advanced image generation model.' },
+    // Google Models
+    { value: 'imagen-4.0-generate-001', label: '🔷 Imagen 4.0', description: 'Google\'s most advanced image generation model.' },
+    
+    // OpenAI Models
+    { value: 'dall-e-3', label: '🟢 DALL·E 3', description: 'OpenAI\'s latest image generation with text rendering.' },
+    { value: 'dall-e-3-hd', label: '🟢 DALL·E 3 HD', description: 'High-quality version of DALL·E 3.' },
+    { value: 'dall-e-2', label: '🟢 DALL·E 2', description: 'Previous generation, faster and cheaper.' },
+    
+    // Stable Diffusion Models (via Replicate)
+    { value: 'stable-diffusion-xl', label: '🟡 Stable Diffusion XL', description: 'Open-source, highly customizable.' },
+    { value: 'sdxl-turbo', label: '🟡 SDXL Turbo', description: 'Ultra-fast variant of SDXL.' },
+    { value: 'flux-1.1-pro', label: '🟡 Flux 1.1 Pro', description: 'Next-gen AI art model by Black Forest Labs.' },
+    
+    // Midjourney Style Models (via Replicate)
+    { value: 'midjourney-v6', label: '🟣 Midjourney v6', description: 'Artistic and stylized image generation.' },
+    { value: 'realvis-xl', label: '🟣 RealVis XL', description: 'Photorealistic image generation.' },
 ];
 
 export const VIDEO_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    { value: 'veo-2.0-generate-001', label: 'Veo 2.0', description: 'Google\'s advanced video model.' },
+    // Google Models
+    { value: 'veo-2.0-generate-001', label: '🔷 Veo 2.0', description: 'Google\'s advanced video model.' },
+    { value: 'veo-3.0', label: '🔷 Veo 3.0', description: 'Latest Veo with audio support and 4K.' },
+    
+    // OpenAI Models
+    { value: 'sora-turbo', label: '🟢 Sora Turbo', description: 'OpenAI\'s video generation (ChatGPT Plus/Pro only).' },
+    
+    // Local Models
+    { value: 'wan2.2-local', label: '🖥️ Wan2.2 (Local)', description: 'Offline video generation, requires GPU (RTX 4090).' },
+    
+    // Other Video Models (via Replicate)
+    { value: 'runway-gen3', label: '🟠 Runway Gen-3 Alpha', description: 'Professional video generation.' },
+    { value: 'pika-2.2', label: '🟠 Pika 2.2', description: '1080p, 10-second video generation.' },
+    { value: 'luma-ray2', label: '🟠 Luma Ray 2', description: 'Realistic motion and physics.' },
+    { value: 'stable-video', label: '🟡 Stable Video Diffusion', description: 'Open-source video generation.' },
 ];
 
 

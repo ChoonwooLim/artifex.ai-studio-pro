@@ -16,7 +16,10 @@
     "full-update-check": "npm run check-ai-models && npm run check-sdk-versions"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.63.0",
     "@google/generative-ai": "^0.24.1",
+    "@mistralai/mistralai": "^1.10.0",
+    "openai": "^5.22.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "uuid": "^13.0.0"
@@ -24,6 +27,9 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
     "tsx": "^4.7.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"

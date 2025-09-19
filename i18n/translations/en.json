@@ -251,7 +251,29 @@
     "styleTitle": "Choose Visual Effect",
     "generateButton": "Generate Video",
     "generating": "Generating...",
-    "resultTitle": "Generated Video"
+    "resultTitle": "Generated Video",
+    "showSettings": "Advanced Settings",
+    "hideSettings": "Hide Settings",
+    "imageInputLabel": "Source Image (Optional)",
+    "removeImage": "Remove Image",
+    "instruction": "Transform text and images into stunning visual art"
+  },
+  "visualArtSettings": {
+    "title": "Advanced Visual Art Settings",
+    "aiSection": "AI Model Settings",
+    "visualSection": "Visual Settings",
+    "outputSection": "Output Settings",
+    "textModel": "Text AI Model",
+    "imageModel": "Image AI Model",
+    "videoModel": "Video AI Model",
+    "creativity": "Creativity Level",
+    "effect": "Visual Effect",
+    "style": "Art Style",
+    "aspectRatio": "Aspect Ratio",
+    "quality": "Output Quality",
+    "outputFormat": "Output Format",
+    "duration": "Animation Duration",
+    "outputNote": "Video and GIF formats support animation. Image format creates a static artwork."
   },
   "visualArtEffects": {
     "glitch": "Glitch Art",
