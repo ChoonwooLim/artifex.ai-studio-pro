@@ -1,20 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
+// Essential components loaded immediately
 import Header from './components/Header';
 import ModeSwitcher from './components/ModeSwitcher';
 import InputForm from './components/InputForm';
 import DescriptionDisplay from './components/DescriptionDisplay';
-import StoryboardInputForm from './components/StoryboardInputForm';
-import StoryboardDisplay from './components/StoryboardDisplay';
-import DetailedStoryboardModal from './components/DetailedStoryboardModal';
 import VideoDisplay from './components/VideoDisplay';
 import ApiKeyInstructions from './components/ApiKeyInstructions';
-import SampleGalleryModal from './components/SampleGalleryModal';
-import GalleryModal from './components/GalleryModal';
-import MediaArtGenerator from './components/MediaArtGenerator';
-import ImageSelectionModal from './components/ImageSelectionModal';
-import VisualArtGenerator from './components/VisualArtGenerator';
+
+// Lazy loaded components for better performance
+const StoryboardInputForm = lazy(() => import('./components/StoryboardInputForm'));
+const StoryboardDisplay = lazy(() => import('./components/StoryboardDisplay'));
+const DetailedStoryboardModal = lazy(() => import('./components/DetailedStoryboardModal'));
+const SampleGalleryModal = lazy(() => import('./components/SampleGalleryModal'));
+const GalleryModal = lazy(() => import('./components/GalleryModal'));
+const MediaArtGenerator = lazy(() => import('./components/MediaArtGenerator'));
+const ImageSelectionModal = lazy(() => import('./components/ImageSelectionModal'));
+const VisualArtGenerator = lazy(() => import('./components/VisualArtGenerator'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+    <div className="flex justify-center items-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+    </div>
+);
 
 import { 
     AppMode, 
@@ -642,98 +652,106 @@ const App: React.FC = () => {
                         )}
                         {mode === AppMode.STORYBOARD && (
                             <div className="max-w-5xl mx-auto">
-                                {!storyboardPanels.length && !isGeneratingStoryboard && (
-                                    <StoryboardInputForm
-                                        onGenerate={handleGenerateStoryboard}
-                                        isLoading={isGeneratingStoryboard}
-                                        config={storyboardConfig}
-                                        setConfig={setStoryboardConfig}
-                                        onShowSampleGallery={() => handleShowSampleGallery('story')}
-                                    />
-                                )}
-                                {error && <p className="text-red-400 mt-4">{error}</p>}
-                                {(isGeneratingStoryboard || storyboardPanels.length > 0) && (
-                                    <StoryboardDisplay 
-                                        panels={storyboardPanels} 
-                                        storyIdea={storyIdea}
-                                        onExpandScene={handleExpandScene}
-                                        onSceneDurationChange={(index, duration) => {
-                                            const newPanels = [...storyboardPanels];
-                                            newPanels[index].sceneDuration = duration;
-                                            setStoryboardPanels(newPanels);
-                                        }}
-                                        onRegenerateVideo={handleRegenerateVideo}
-                                        onRegenerateImage={handleRegenerateImage}
-                                        onDeletePanel={(index) => setStoryboardPanels(storyboardPanels.filter((_, i) => i !== index))}
-                                        isGeneratingImages={isGeneratingImages}
-                                        onExportPdf={handleExportPdf}
-                                        isExportingPdf={isExportingPdf}
-                                    />
-                                )}
+                                <Suspense fallback={<LoadingFallback />}>
+                                    {!storyboardPanels.length && !isGeneratingStoryboard && (
+                                        <StoryboardInputForm
+                                            onGenerate={handleGenerateStoryboard}
+                                            isLoading={isGeneratingStoryboard}
+                                            config={storyboardConfig}
+                                            setConfig={setStoryboardConfig}
+                                            onShowSampleGallery={() => handleShowSampleGallery('story')}
+                                        />
+                                    )}
+                                    {error && <p className="text-red-400 mt-4">{error}</p>}
+                                    {(isGeneratingStoryboard || storyboardPanels.length > 0) && (
+                                        <StoryboardDisplay 
+                                            panels={storyboardPanels} 
+                                            storyIdea={storyIdea}
+                                            onExpandScene={handleExpandScene}
+                                            onSceneDurationChange={(index, duration) => {
+                                                const newPanels = [...storyboardPanels];
+                                                newPanels[index].sceneDuration = duration;
+                                                setStoryboardPanels(newPanels);
+                                            }}
+                                            onRegenerateVideo={handleRegenerateVideo}
+                                            onRegenerateImage={handleRegenerateImage}
+                                            onDeletePanel={(index) => setStoryboardPanels(storyboardPanels.filter((_, i) => i !== index))}
+                                            isGeneratingImages={isGeneratingImages}
+                                            onExportPdf={handleExportPdf}
+                                            isExportingPdf={isExportingPdf}
+                                        />
+                                    )}
+                                </Suspense>
                                 <VideoDisplay panels={storyboardPanels} />
                             </div>
                         )}
                         {mode === AppMode.MEDIA_ART && (
                             <div className="max-w-5xl mx-auto">
-                                <MediaArtGenerator 
-                                    state={mediaArtState}
-                                    setState={setMediaArtState}
-                                    onOpenImageSelector={() => setIsImageSelectorOpen(true)}
-                                    onGenerateScenes={handleGenerateMediaArtScenes}
-                                    onRegenerateVideo={handleRegenerateMediaArtVideo}
-                                    isLoading={isGeneratingMediaArtScenes}
-                                    error={mediaArtError}
-                                />
+                                <Suspense fallback={<LoadingFallback />}>
+                                    <MediaArtGenerator 
+                                        state={mediaArtState}
+                                        setState={setMediaArtState}
+                                        onOpenImageSelector={() => setIsImageSelectorOpen(true)}
+                                        onGenerateScenes={handleGenerateMediaArtScenes}
+                                        onRegenerateVideo={handleRegenerateMediaArtVideo}
+                                        isLoading={isGeneratingMediaArtScenes}
+                                        error={mediaArtError}
+                                    />
+                                </Suspense>
                                 <VideoDisplay panels={mediaArtState.panels} />
                             </div>
                         )}
                          {mode === AppMode.VISUAL_ART && (
                             <div className="max-w-5xl mx-auto">
-                                <VisualArtGenerator
-                                    state={visualArtState}
-                                    setState={setVisualArtState}
-                                    onGenerate={handleGenerateVisualArt}
-                                />
+                                <Suspense fallback={<LoadingFallback />}>
+                                    <VisualArtGenerator
+                                        state={visualArtState}
+                                        setState={setVisualArtState}
+                                        onGenerate={handleGenerateVisualArt}
+                                    />
+                                </Suspense>
                             </div>
                          )}
                     </div>
                 </main>
             </div>
             {/* Modals */}
-            <DetailedStoryboardModal 
-                isOpen={isDetailedModalOpen}
-                onClose={() => setIsDetailedModalOpen(false)}
-                panels={detailedModalPanels}
-                isLoading={isDetailedModalLoading}
-                error={detailedModalError}
-                originalSceneDescription={originalSceneContext?.description}
-                onSaveChanges={handleSaveChangesFromModal}
-            />
-            <SampleGalleryModal
-                isOpen={isSampleGalleryOpen}
-                onClose={() => setIsSampleGalleryOpen(false)}
-                type={sampleGalleryType}
-                products={getSampleProducts()}
-                stories={getSampleStories()}
-                onSelectProduct={handleSelectSampleProduct}
-                onSelectStory={handleSelectSampleStory}
-            />
-            <GalleryModal 
-                isOpen={isGalleryOpen}
-                onClose={() => setIsGalleryOpen(false)}
-                projects={projects}
-                onLoad={() => {}} // Simplified for now
-                onDelete={() => {}} // Simplified for now
-                onExport={() => {}} // Simplified for now
-            />
-            <ImageSelectionModal
-                isOpen={isImageSelectorOpen}
-                onClose={() => setIsImageSelectorOpen(false)}
-                onSelect={(source: MediaArtSourceImage) => {
-                    setMediaArtState(s => ({...s, sourceImage: source, panels: []}));
-                    setIsImageSelectorOpen(false);
-                }}
-            />
+            <Suspense fallback={<LoadingFallback />}>
+                <DetailedStoryboardModal 
+                    isOpen={isDetailedModalOpen}
+                    onClose={() => setIsDetailedModalOpen(false)}
+                    panels={detailedModalPanels}
+                    isLoading={isDetailedModalLoading}
+                    error={detailedModalError}
+                    originalSceneDescription={originalSceneContext?.description}
+                    onSaveChanges={handleSaveChangesFromModal}
+                />
+                <SampleGalleryModal
+                    isOpen={isSampleGalleryOpen}
+                    onClose={() => setIsSampleGalleryOpen(false)}
+                    type={sampleGalleryType}
+                    products={getSampleProducts()}
+                    stories={getSampleStories()}
+                    onSelectProduct={handleSelectSampleProduct}
+                    onSelectStory={handleSelectSampleStory}
+                />
+                <GalleryModal 
+                    isOpen={isGalleryOpen}
+                    onClose={() => setIsGalleryOpen(false)}
+                    projects={projects}
+                    onLoad={() => {}} // Simplified for now
+                    onDelete={() => {}} // Simplified for now
+                    onExport={() => {}} // Simplified for now
+                />
+                <ImageSelectionModal
+                    isOpen={isImageSelectorOpen}
+                    onClose={() => setIsImageSelectorOpen(false)}
+                    onSelect={(source: MediaArtSourceImage) => {
+                        setMediaArtState(s => ({...s, sourceImage: source, panels: []}));
+                        setIsImageSelectorOpen(false);
+                    }}
+                />
+            </Suspense>
         </>
     );
 };

@@ -1,9 +1,11 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
-import { OpenAIService } from './aiProviders/openaiService';
-import { AnthropicService } from './aiProviders/anthropicService';
-import { XAIService } from './aiProviders/xaiService';
-import { ReplicateService } from './aiProviders/replicateService';
-import { MistralService } from './aiProviders/mistralService';
+
+// Lazy load AI service types
+type OpenAIService = import('./aiProviders/openaiService').OpenAIService;
+type AnthropicService = import('./aiProviders/anthropicService').AnthropicService;
+type XAIService = import('./aiProviders/xaiService').XAIService;
+type ReplicateService = import('./aiProviders/replicateService').ReplicateService;
+type MistralService = import('./aiProviders/mistralService').MistralService;
 
 interface GenerateTextOptions {
     prompt: string;
@@ -28,25 +30,60 @@ interface GenerateVideoOptions {
 }
 
 class AIService {
-    private openaiService: OpenAIService;
-    private anthropicService: AnthropicService;
-    private xaiService: XAIService;
-    private replicateService: ReplicateService;
-    private mistralService: MistralService;
+    private openaiService: OpenAIService | null = null;
+    private anthropicService: AnthropicService | null = null;
+    private xaiService: XAIService | null = null;
+    private replicateService: ReplicateService | null = null;
+    private mistralService: MistralService | null = null;
     private googleGenAI: GoogleGenerativeAI | null = null;
 
     constructor() {
-        this.openaiService = new OpenAIService();
-        this.anthropicService = new AnthropicService();
-        this.xaiService = new XAIService();
-        this.replicateService = new ReplicateService();
-        this.mistralService = new MistralService();
-
-        // Check environment variable first, then localStorage
+        // Only initialize Google AI immediately as it's the default
         const geminiKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google');
         if (geminiKey) {
             this.googleGenAI = new GoogleGenerativeAI(geminiKey);
         }
+    }
+
+    // Lazy loading methods for each service
+    private async getOpenAIService(): Promise<OpenAIService> {
+        if (!this.openaiService) {
+            const { OpenAIService } = await import('./aiProviders/openaiService');
+            this.openaiService = new OpenAIService();
+        }
+        return this.openaiService;
+    }
+
+    private async getAnthropicService(): Promise<AnthropicService> {
+        if (!this.anthropicService) {
+            const { AnthropicService } = await import('./aiProviders/anthropicService');
+            this.anthropicService = new AnthropicService();
+        }
+        return this.anthropicService;
+    }
+
+    private async getXAIService(): Promise<XAIService> {
+        if (!this.xaiService) {
+            const { XAIService } = await import('./aiProviders/xaiService');
+            this.xaiService = new XAIService();
+        }
+        return this.xaiService;
+    }
+
+    private async getMistralService(): Promise<MistralService> {
+        if (!this.mistralService) {
+            const { MistralService } = await import('./aiProviders/mistralService');
+            this.mistralService = new MistralService();
+        }
+        return this.mistralService;
+    }
+
+    private async getReplicateService(): Promise<ReplicateService> {
+        if (!this.replicateService) {
+            const { ReplicateService } = await import('./aiProviders/replicateService');
+            this.replicateService = new ReplicateService();
+        }
+        return this.replicateService;
     }
 
     private getProviderForModel(model: string): string {
@@ -103,28 +140,32 @@ class AIService {
         try {
             switch (provider) {
                 case 'openai':
-                    if (!this.openaiService.isConfigured()) {
+                    const openai = await this.getOpenAIService();
+                    if (!openai.isConfigured()) {
                         throw new Error('OpenAI API key not configured. Please add your API key in settings.');
                     }
-                    return await this.openaiService.generateText(options);
+                    return await openai.generateText(options);
 
                 case 'anthropic':
-                    if (!this.anthropicService.isConfigured()) {
+                    const anthropic = await this.getAnthropicService();
+                    if (!anthropic.isConfigured()) {
                         throw new Error('Anthropic API key not configured. Please add your API key in settings.');
                     }
-                    return await this.anthropicService.generateText(options);
+                    return await anthropic.generateText(options);
 
                 case 'xai':
-                    if (!this.xaiService.isConfigured()) {
+                    const xai = await this.getXAIService();
+                    if (!xai.isConfigured()) {
                         throw new Error('xAI API key not configured. Please add your API key in settings.');
                     }
-                    return await this.xaiService.generateText(options);
+                    return await xai.generateText(options);
 
                 case 'mistral':
-                    if (!this.mistralService.isConfigured()) {
+                    const mistral = await this.getMistralService();
+                    if (!mistral.isConfigured()) {
                         throw new Error('Mistral API key not configured. Please add your API key in settings.');
                     }
-                    return await this.mistralService.generateText(options);
+                    return await mistral.generateText(options);
 
                 case 'google':
                 default:
@@ -180,16 +221,18 @@ class AIService {
         try {
             switch (provider) {
                 case 'openai':
-                    if (!this.openaiService.isConfigured()) {
+                    const openaiImg = await this.getOpenAIService();
+                    if (!openaiImg.isConfigured()) {
                         throw new Error('OpenAI API key not configured. Please add your API key in settings.');
                     }
-                    return await this.openaiService.generateImage(options);
+                    return await openaiImg.generateImage(options);
 
                 case 'replicate':
-                    if (!this.replicateService.isConfigured()) {
+                    const replicateImg = await this.getReplicateService();
+                    if (!replicateImg.isConfigured()) {
                         throw new Error('Replicate API key not configured. Please add your API key in settings.');
                     }
-                    return await this.replicateService.generateImage(options);
+                    return await replicateImg.generateImage(options);
 
                 case 'google':
                 default:
@@ -210,17 +253,19 @@ class AIService {
             // Try fallback to other available services
             if (provider === 'google' || options.model.includes('imagen')) {
                 // Try OpenAI DALL-E if available
-                if (this.openaiService.isConfigured()) {
+                const openaiService = await this.getOpenAIService();
+                if (openaiService.isConfigured()) {
                     console.log('Falling back to OpenAI DALL-E for image generation');
-                    return await this.openaiService.generateImage({
+                    return await openaiService.generateImage({
                         ...options,
                         model: 'dall-e-3'
                     });
                 }
                 // Try Replicate if available
-                if (this.replicateService.isConfigured()) {
+                const replicateService = await this.getReplicateService();
+                if (replicateService.isConfigured()) {
                     console.log('Falling back to Replicate for image generation');
-                    return await this.replicateService.generateImage({
+                    return await replicateService.generateImage({
                         ...options,
                         model: 'stable-diffusion-xl'
                     });
@@ -236,18 +281,20 @@ class AIService {
         console.log('Google Imagen not available, attempting automatic fallback');
         
         // Try OpenAI first if configured
-        if (this.openaiService.isConfigured()) {
+        const openaiSvc = await this.getOpenAIService();
+        if (openaiSvc.isConfigured()) {
             console.log('Redirecting to OpenAI DALL-E service');
-            return await this.openaiService.generateImage({
+            return await openaiSvc.generateImage({
                 ...options,
                 model: 'dall-e-3'
             });
         }
         
         // Try Replicate if configured
-        if (this.replicateService.isConfigured()) {
+        const replicateSvc = await this.getReplicateService();
+        if (replicateSvc.isConfigured()) {
             console.log('Redirecting to Replicate service');
-            return await this.replicateService.generateImage({
+            return await replicateSvc.generateImage({
                 ...options,
                 model: 'stable-diffusion-xl'
             });
@@ -265,10 +312,11 @@ class AIService {
 
         try {
             if (provider === 'replicate') {
-                if (!this.replicateService.isConfigured()) {
+                const replicateVid = await this.getReplicateService();
+                if (!replicateVid.isConfigured()) {
                     throw new Error('Replicate API key not configured. Please add your API key in settings.');
                 }
-                return await this.replicateService.generateVideo(options);
+                return await replicateVid.generateVideo(options);
             }
 
             if (provider === 'google' && this.googleGenAI) {
