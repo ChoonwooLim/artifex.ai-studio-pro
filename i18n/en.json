@@ -246,7 +246,10 @@
   },
   "visualArt": {
     "title": "Visual Art Generator",
-    "textInputLabel": "Enter Text for Animation",
+    "instruction": "Provide text, an image, or both to generate a video.",
+    "imageInputLabel": "Image (Optional)",
+    "removeImage": "Remove Image",
+    "textInputLabel": "Text (Optional)",
     "textInputPlaceholder": "Type your text here...",
     "styleTitle": "Choose Visual Effect",
     "generateButton": "Generate Video",

@@ -10,12 +10,12 @@ interface StoryboardInputFormProps {
     config: StoryboardConfig;
     setConfig: (config: StoryboardConfig) => void;
     onShowSampleGallery: () => void;
-    hideSettings?: boolean;
 }
 
-const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, isLoading, config, setConfig, onShowSampleGallery, hideSettings = false }) => {
+const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, isLoading, config, setConfig, onShowSampleGallery }) => {
     const { t } = useTranslation();
     const [idea, setIdea] = useState('');
+    const [showSettings, setShowSettings] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,7 +40,17 @@ const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, i
                 />
             </div>
             
-            {!hideSettings && (
+            <div className="flex justify-between items-center">
+                <button
+                    type="button"
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="text-sm text-blue-400 hover:text-blue-300"
+                >
+                    {showSettings ? t('storyboardForm.hideSettings') : t('storyboardForm.showSettings')}
+                </button>
+            </div>
+
+            {showSettings && (
                 <div className="animate-fade-in">
                     <StoryboardSettings config={config} setConfig={setConfig} />
                 </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -10,9 +9,7 @@ import StoryboardInputForm from './components/StoryboardInputForm';
 import StoryboardDisplay from './components/StoryboardDisplay';
 import DetailedStoryboardModal from './components/DetailedStoryboardModal';
 import VideoDisplay from './components/VideoDisplay';
-import ProfessionalStoryboardSettings from './components/ProfessionalStoryboardSettings';
 import ApiKeyInstructions from './components/ApiKeyInstructions';
-import ApiKeyManager from './components/ApiKeyManager';
 import SampleGalleryModal from './components/SampleGalleryModal';
 import GalleryModal from './components/GalleryModal';
 import MediaArtGenerator from './components/MediaArtGenerator';
@@ -39,34 +36,16 @@ import {
     VisualArtState,
     VisualArtEffect,
 } from './types';
-import { aiService } from './services/aiService';
-import { professionalImageService, CharacterReference, StyleGuide } from './services/professionalImageService';
+import * as geminiService from './services/geminiService';
 import * as db from './services/db';
 import { useTranslation } from './i18n/LanguageContext';
 import { sampleProductsData, sampleStoryIdeasData } from './sampleData';
 import { MEDIA_ART_STYLE_OPTIONS } from './constants';
 
-const hasApiKeys = () => {
-    // Check environment variables
-    if (import.meta.env.VITE_GOOGLE_API_KEY || 
-        import.meta.env.VITE_OPENAI_API_KEY || 
-        import.meta.env.VITE_ANTHROPIC_API_KEY ||
-        import.meta.env.VITE_XAI_API_KEY ||
-        import.meta.env.VITE_REPLICATE_API_KEY) {
-        return true;
-    }
-    
-    // Check localStorage
-    if (localStorage.getItem('apiKey_google') ||
-        localStorage.getItem('apiKey_openai') ||
-        localStorage.getItem('apiKey_anthropic') ||
-        localStorage.getItem('apiKey_xai') ||
-        localStorage.getItem('apiKey_replicate')) {
-        return true;
-    }
-    
-    return false;
-};
+declare var jspdf: any;
+declare var html2canvas: any;
+
+const API_KEY = process.env.API_KEY;
 
 const App: React.FC = () => {
     const { t, language } = useTranslation();
@@ -82,9 +61,6 @@ const App: React.FC = () => {
         targetAudience: '',
         tone: Tone.FRIENDLY,
         language: 'English',
-        textModel: 'gpt-5-turbo',
-        imageModel: 'dall-e-4-hd',
-        videoModel: 'sora-2-turbo',
     };
     const [descriptionConfig, setDescriptionConfig] = useState<DescriptionConfig>(initialDescriptionConfig);
     const [description, setDescription] = useState('');
@@ -98,40 +74,16 @@ const App: React.FC = () => {
         videoLength: VideoLength.SHORT,
         mood: Mood.EPIC,
         descriptionLanguage: 'English',
-        textModel: 'gpt-5-turbo',
-        imageModel: 'dall-e-4-hd',
-        videoModel: 'sora-2-turbo',
+        textModel: 'gemini-2.5-flash',
+        imageModel: 'imagen-4.0-generate-001',
+        videoModel: 'veo-2.0-generate-001',
     };
     const [storyboardConfig, setStoryboardConfig] = useState<StoryboardConfig>(initialStoryboardConfig);
     const [storyIdea, setStoryIdea] = useState('');
     const [storyboardPanels, setStoryboardPanels] = useState<StoryboardPanel[]>([]);
     const [isGeneratingStoryboard, setIsGeneratingStoryboard] = useState(false);
     const [isGeneratingImages, setIsGeneratingImages] = useState(false);
-    
-    // Professional Mode State
-    const [isProfessionalMode, setIsProfessionalMode] = useState(true);
-    const [characters, setCharacters] = useState<CharacterReference[]>([]);
-    const [styleGuide, setStyleGuide] = useState<StyleGuide>({
-        cinematography: {
-            lighting: 'dramatic' as const,
-            colorGrading: 'cinematic' as const,
-            cameraAngle: 'eye level' as const,
-            depthOfField: 'shallow' as const,
-            aspectRatio: '2.39:1' as const
-        },
-        artDirection: {
-            artStyle: 'hyperrealistic' as const,
-            productionQuality: 'blockbuster' as const,
-            era: 'contemporary' as const,
-            mood: 'dramatic' as const
-        },
-        technicalSpecs: {
-            resolution: '8K' as const,
-            quality: 'maximum' as const,
-            renderEngine: 'unreal engine 5' as const,
-            postProcessing: ['color grading', 'film grain', 'chromatic aberration subtle']
-        }
-    });
+    const [isExportingPdf, setIsExportingPdf] = useState(false);
     
     // Media Art Mode State
     const initialMediaArtState: MediaArtState = {
@@ -139,6 +91,7 @@ const App: React.FC = () => {
         style: MediaArtStyle.DATA_COMPOSITION,
         styleParams: MEDIA_ART_STYLE_OPTIONS.find(opt => opt.value === MediaArtStyle.DATA_COMPOSITION)!.defaultParams,
         panels: [],
+        config: initialStoryboardConfig,
     };
     const [mediaArtState, setMediaArtState] = useState<MediaArtState>(initialMediaArtState);
     const [isGeneratingMediaArtScenes, setIsGeneratingMediaArtScenes] = useState(false);
@@ -147,6 +100,7 @@ const App: React.FC = () => {
     // Visual Art Mode State
     const initialVisualArtState: VisualArtState = {
         inputText: '',
+        sourceImage: null,
         effect: VisualArtEffect.GLITCH,
         resultVideoUrl: null,
         isLoading: false,
@@ -165,7 +119,6 @@ const App: React.FC = () => {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
-    const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
     
     // Generic loading/error for now
     const [error, setError] = useState<string | null>(null);
@@ -186,19 +139,7 @@ const App: React.FC = () => {
         setError(null);
         setDescription('');
         try {
-            const prompt = `Generate a compelling product description.
-    - Product Name: ${descriptionConfig.productName}
-    - Key Features: ${descriptionConfig.keyFeatures}
-    - Target Audience: ${descriptionConfig.targetAudience}
-    - Tone: ${descriptionConfig.tone}
-    - Language: ${descriptionConfig.language}
-    
-    The description should be concise, engaging, and highlight the key benefits for the target audience. Do not include a title or header.`;
-            const result = await aiService.generateText({
-                prompt,
-                model: descriptionConfig.textModel,
-                temperature: 0.7
-            });
+            const result = await geminiService.generateDescription(descriptionConfig);
             setDescription(result);
         } catch (e: any) {
             setError(e.message || t('errors.descriptionGeneration'));
@@ -217,97 +158,23 @@ const App: React.FC = () => {
         setStoryboardPanels([]);
 
         try {
-            if (isProfessionalMode && characters.length > 0) {
-                // Professional mode with character consistency
-                const prompt = `Generate a ${config.sceneCount}-scene storyboard for a ${config.videoLength} video.
-    - Idea: ${idea}
-    - Visual Style: ${config.visualStyle}
-    - Mood: ${config.mood}
-    - Language for descriptions: ${config.descriptionLanguage}
-    - Characters: ${characters.map(c => c.name).join(', ')}
-    
-    Return exactly ${config.sceneCount} scene descriptions. Each should be visual, cinematic, and include the characters where appropriate.`;
-                const storyboardText = await aiService.generateText({
-                    prompt,
-                    model: config.textModel,
-                    temperature: 0.8
-                });
-                const scenes = storyboardText.split('\n\n').filter(p => p.trim()).slice(0, config.sceneCount);
-                
-                // Use professional image service for consistent generation
-                const images = await professionalImageService.generateStoryboardWithConsistency(
-                    scenes,
-                    characters,
-                    styleGuide,
-                    config.imageModel
-                );
-                
-                const panels: StoryboardPanel[] = scenes.map((description, i) => ({
-                    description,
-                    imageUrl: images[i].startsWith('data:') || images[i].startsWith('http') 
-                        ? images[i] 
-                        : `data:image/jpeg;base64,${images[i]}`,
-                    isLoadingImage: false
-                }));
-                setStoryboardPanels(panels);
-            } else {
-                // Standard mode or professional mode without characters
-                const prompt = `Generate a ${config.sceneCount}-scene storyboard for a ${config.videoLength} video.
-    - Idea: ${idea}
-    - Visual Style: ${config.visualStyle}
-    - Aspect Ratio: ${config.aspectRatio}
-    - Mood: ${config.mood}
-    - Language for descriptions: ${config.descriptionLanguage}
-    
-    Return exactly ${config.sceneCount} scene descriptions. Each should be visual, cinematic, and suitable for the specified mood and style.`;
-                const storyboardText = await aiService.generateText({
-                    prompt,
-                    model: config.textModel,
-                    temperature: 0.8
-                });
-                const panels = storyboardText.split('\n\n').filter(p => p.trim()).slice(0, config.sceneCount).map(description => ({ description }));
-                const initialPanels: StoryboardPanel[] = panels.map(p => ({ ...p, isLoadingImage: true }));
-                setStoryboardPanels(initialPanels);
-                setIsGeneratingStoryboard(false);
+            const panels = await geminiService.generateStoryboard(idea, config);
+            const initialPanels: StoryboardPanel[] = panels.map(p => ({ ...p, isLoadingImage: true }));
+            setStoryboardPanels(initialPanels);
+            setIsGeneratingStoryboard(false);
 
-                // Generate images
-                let currentPanels = [...initialPanels];
-                for (let i = 0; i < panels.length; i++) {
-                    try {
-                        let imageUrls;
-                        if (isProfessionalMode) {
-                            // Use professional service even without characters
-                            imageUrls = await professionalImageService.generateProfessionalImage({
-                                prompt: panels[i].description,
-                                model: config.imageModel,
-                                styleGuide: styleGuide,
-                                qualitySettings: {
-                                    steps: 50,
-                                    cfgScale: 7.5,
-                                    upscale: true,
-                                    enhanceFaces: true
-                                }
-                            });
-                        } else {
-                            imageUrls = await aiService.generateImage({
-                                prompt: panels[i].description,
-                                model: config.imageModel,
-                                aspectRatio: config.aspectRatio,
-                                count: 1
-                            });
-                        }
-                        const imageBase64 = imageUrls[0];
-                        const imageUrl = imageBase64.startsWith('data:') || imageBase64.startsWith('http') 
-                            ? imageBase64 
-                            : `data:image/jpeg;base64,${imageBase64}`;
-                        currentPanels[i] = { ...currentPanels[i], imageUrl, isLoadingImage: false };
-                    } catch (imgErr: any) {
-                        console.error(`Image generation failed for panel ${i}:`, imgErr);
-                        const isQuotaError = imgErr.message?.includes('429');
-                        currentPanels[i] = { ...currentPanels[i], imageUrl: isQuotaError ? 'quota_error' : 'error', isLoadingImage: false };
-                    }
-                    setStoryboardPanels([...currentPanels]);
+            // Generate images sequentially
+            let currentPanels = [...initialPanels];
+            for (let i = 0; i < panels.length; i++) {
+                try {
+                    const imageBase64 = await geminiService.generateImageForPanel(panels[i].description, config);
+                    currentPanels[i] = { ...currentPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
+                } catch (imgErr: any) {
+                    console.error(`Image generation failed for panel ${i}:`, imgErr);
+                    const isQuotaError = imgErr.message?.includes('429');
+                    currentPanels[i] = { ...currentPanels[i], imageUrl: isQuotaError ? 'quota_error' : 'error', isLoadingImage: false };
                 }
+                setStoryboardPanels([...currentPanels]);
             }
         } catch (e: any) {
             setError(e.message || t('errors.storyboardGeneration'));
@@ -324,41 +191,7 @@ const App: React.FC = () => {
         setDetailedModalError(null);
         setDetailedModalPanels([]);
         try {
-            const prompt = `Generate a detailed 4-scene expansion of this scene: "${sceneDescription}".
-    Language: ${storyboardConfig.descriptionLanguage}
-    Return exactly 4 detailed scene descriptions that expand on the original scene. Do not use markdown formatting, headers, or numbering. Just provide clean text descriptions separated by line breaks.`;
-            const detailedText = await aiService.generateText({
-                prompt,
-                model: storyboardConfig.textModel,
-                temperature: 0.8
-            });
-            
-            // Clean the response from markdown and extract descriptions
-            const cleanedText = detailedText
-                .replace(/#{1,6}\s*/g, '') // Remove markdown headers
-                .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1') // Remove bold/italic markdown
-                .replace(/^\d+\.\s*/gm, '') // Remove numbered lists
-                .replace(/^[-*]\s*/gm, '') // Remove bullet points
-                .trim();
-            
-            // Split by double newlines or scene indicators
-            const descriptions = cleanedText
-                .split(/\n{2,}|(?=확장된 장면|Scene\s*\d+|Panel\s*\d+|장면\s*\d+)/i)
-                .map(text => text
-                    .replace(/^(확장된 장면|Scene|Panel|장면)\s*\d+[:.]?\s*/i, '') // Remove scene/panel prefixes
-                    .replace(/^[\s:]+/, '') // Remove leading colons and spaces
-                    .replace(/^(출발과 준비|팀원들의 첫 만남|준비 단계 완료|출발 직전)[:.]?\s*/, '') // Remove common Korean scene titles
-                    .trim()
-                )
-                .filter(text => text.length > 20) // Filter out too-short segments
-                .slice(0, 4); // Take exactly 4 scenes
-            
-            // Ensure we have exactly 4 descriptions
-            while (descriptions.length < 4) {
-                descriptions.push(`Extended scene ${descriptions.length + 1}: Continuation of the narrative`);
-            }
-            
-            const newPanelsData = descriptions.map(description => ({ description }));
+            const newPanelsData = await geminiService.generateDetailedStoryboard(sceneDescription, storyboardConfig.descriptionLanguage);
             const newPanels: DetailedStoryboardPanel[] = newPanelsData.map(p => ({ ...p, isLoadingImage: true }));
             setDetailedModalPanels(newPanels);
             setIsDetailedModalLoading(false);
@@ -366,13 +199,7 @@ const App: React.FC = () => {
             let currentDetailedPanels = [...newPanels];
             for (let i = 0; i < newPanels.length; i++) {
                 try {
-                    const imageUrls = await aiService.generateImage({
-                        prompt: newPanels[i].description,
-                        model: storyboardConfig.imageModel,
-                        aspectRatio: storyboardConfig.aspectRatio,
-                        count: 1
-                    });
-                    const imageBase64 = imageUrls[0];
+                    const imageBase64 = await geminiService.generateImageForPanel(newPanels[i].description, storyboardConfig);
                     currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
                 } catch (imgErr) {
                     currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: 'error', isLoadingImage: false };
@@ -407,32 +234,8 @@ const App: React.FC = () => {
         setStoryboardPanels(panels);
 
         try {
-            let imageUrls;
-            if (isProfessionalMode) {
-                imageUrls = await professionalImageService.generateProfessionalImage({
-                    prompt: panels[index].description,
-                    model: storyboardConfig.imageModel,
-                    characters: characters,
-                    styleGuide: styleGuide,
-                    qualitySettings: {
-                        steps: 50,
-                        cfgScale: 7.5,
-                        upscale: true,
-                        enhanceFaces: true
-                    }
-                });
-            } else {
-                imageUrls = await aiService.generateImage({
-                    prompt: panels[index].description,
-                    model: storyboardConfig.imageModel,
-                    aspectRatio: storyboardConfig.aspectRatio,
-                    count: 1
-                });
-            }
-            const imageBase64 = imageUrls[0];
-            panels[index].imageUrl = imageBase64.startsWith('data:') || imageBase64.startsWith('http')
-                ? imageBase64
-                : `data:image/jpeg;base64,${imageBase64}`;
+            const imageBase64 = await geminiService.generateImageForPanel(panels[index].description, storyboardConfig);
+            panels[index].imageUrl = `data:image/jpeg;base64,${imageBase64}`;
         } catch (e) {
             panels[index].imageUrl = 'error';
         } finally {
@@ -451,11 +254,7 @@ const App: React.FC = () => {
 
         try {
             const imageBase64 = panel.imageUrl.split(',')[1];
-            const videoUrl = await aiService.generateVideo({
-                prompt: panel.description,
-                model: storyboardConfig.videoModel,
-                duration: panel.sceneDuration || 4
-            });
+            const videoUrl = await geminiService.generateVideoForPanel(panel.description, imageBase64, storyboardConfig.videoModel);
             panels[index].videoUrl = videoUrl;
         } catch (e: any) {
             panels[index].videoUrl = 'error';
@@ -506,6 +305,205 @@ const App: React.FC = () => {
         setVisualArtState(initialVisualArtState);
         setError(null);
     };
+
+    const handleExportPdf = async () => {
+        if (storyboardPanels.length === 0) return;
+        setIsExportingPdf(true);
+        const pdfContainer = document.createElement('div');
+        try {
+            const { jsPDF } = jspdf;
+            const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            const pdfWidthMm = 210;
+            const pdfHeightMm = 297;
+            const marginMm = 15;
+            const contentWidthMm = pdfWidthMm - (marginMm * 2);
+
+            // Setup off-screen container for rendering
+            pdfContainer.style.position = 'absolute';
+            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.top = '0px';
+            const pageWidthPx = 794; // A4 width in pixels at 96 DPI
+            const pageHeightPx = 1123; // A4 height in pixels at 96 DPI
+            pdfContainer.style.width = `${pageWidthPx}px`;
+            pdfContainer.style.height = `${pageHeightPx}px`;
+            pdfContainer.style.fontFamily = "'Noto Sans KR', 'Inter', sans-serif";
+            document.body.appendChild(pdfContainer);
+
+            // --- Cover Page ---
+            pdfContainer.innerHTML = `
+                <div style="background-color: #0f172a; color: white; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; box-sizing: border-box; text-align: center;">
+                    <h1 style="font-size: 36px; font-weight: bold; line-height: 1.3;">${storyIdea}</h1>
+                    <p style="font-size: 16px; color: #94a3b8; margin-top: 16px;">Storyboard - ${new Date().toLocaleDateString()}</p>
+                </div>
+            `;
+            const coverCanvas = await html2canvas(pdfContainer.firstElementChild as HTMLElement, { scale: 2 });
+            pdf.addImage(coverCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+            // --- Storyboard Pages ---
+            if (storyboardPanels.length > 0) pdf.addPage();
+            
+            const pageWrapper = document.createElement('div');
+            pageWrapper.style.backgroundColor = '#0f172a';
+            pageWrapper.style.color = 'white';
+            pageWrapper.style.width = '100%';
+            pageWrapper.style.minHeight = '100%';
+            pageWrapper.style.padding = `${(marginMm / pdfWidthMm) * pageWidthPx}px`;
+            pageWrapper.style.boxSizing = 'border-box';
+            pdfContainer.innerHTML = '';
+            pdfContainer.appendChild(pageWrapper);
+
+            for (let i = 0; i < storyboardPanels.length; i++) {
+                const panel = storyboardPanels[i];
+                if (!panel.imageUrl || panel.imageUrl.startsWith('error')) continue;
+
+                const panelEl = document.createElement('div');
+                panelEl.innerHTML = `
+                    <div style="border: 1px solid #334155; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+                        <div style="padding: 8px 12px; background-color: #1e293b;">
+                            <h3 style="font-size: 16px; font-weight: bold;">Scene #${i + 1}</h3>
+                        </div>
+                        <img src="${panel.imageUrl}" style="width: 100%; height: auto; display: block; aspect-ratio: 16/9; object-fit: cover;" />
+                        <div style="padding: 16px; background-color: #1e293b;">
+                            <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; word-wrap: break-word;">${panel.description}</p>
+                        </div>
+                    </div>`;
+                
+                pageWrapper.appendChild(panelEl);
+
+                if (pageWrapper.offsetHeight > pageHeightPx && pageWrapper.children.length > 1) {
+                    pageWrapper.removeChild(panelEl);
+                    const pageCanvas = await html2canvas(pageWrapper, { scale: 2 });
+                    pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+                    pdf.addPage();
+                    pageWrapper.innerHTML = '';
+                    pageWrapper.appendChild(panelEl);
+                }
+            }
+
+            if (pageWrapper.children.length > 0) {
+                const lastPageCanvas = await html2canvas(pageWrapper, { scale: 2 });
+                pdf.addImage(lastPageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+            }
+
+            const safeTitle = storyIdea.substring(0, 30).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            pdf.save(`storyboard_${safeTitle}.pdf`);
+
+        } catch (err) {
+            console.error("Failed to export PDF:", err);
+            setError("Failed to export storyboard as PDF.");
+        } finally {
+            if (pdfContainer) document.body.removeChild(pdfContainer);
+            setIsExportingPdf(false);
+        }
+    };
+
+    const handleExportProject = async () => {
+        try {
+            const serializablePanels = await Promise.all(
+                storyboardPanels.map(async (panel) => {
+                    if (panel.videoUrl && panel.videoUrl.startsWith('blob:')) {
+                        const response = await fetch(panel.videoUrl);
+                        const blob = await response.blob();
+                        const videoDataUrl = await new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result as string);
+                            reader.readAsDataURL(blob);
+                        });
+                        return { ...panel, videoUrl: videoDataUrl };
+                    }
+                    return panel;
+                })
+            );
+
+            const projectData = {
+                version: '1.0.0',
+                mode,
+                descriptionConfig,
+                description,
+                storyboardConfig,
+                storyIdea,
+                storyboardPanels: serializablePanels,
+                mediaArtState,
+                visualArtState,
+            };
+            
+            const jsonString = JSON.stringify(projectData);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `artifex_project_${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err: any) {
+            console.error("Failed to export project:", err);
+            setError(err.message || t('errors.projectExport'));
+        }
+    };
+
+    const handleImportProject = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const projectData = JSON.parse(event.target?.result as string);
+                    
+                    if (!projectData.version || !projectData.mode) throw new Error('Invalid project file.');
+
+                    handleNewProject();
+                    await new Promise(resolve => setTimeout(resolve, 50));
+
+                    setMode(projectData.mode);
+                    setDescriptionConfig(projectData.descriptionConfig || initialDescriptionConfig);
+                    setDescription(projectData.description || '');
+                    setStoryboardConfig(projectData.storyboardConfig || initialStoryboardConfig);
+                    setStoryIdea(projectData.storyIdea || '');
+                    
+                    const loadedMediaArtState = projectData.mediaArtState ? 
+                        { ...initialMediaArtState, ...projectData.mediaArtState } : 
+                        initialMediaArtState;
+                    if (!loadedMediaArtState.config) {
+                        loadedMediaArtState.config = initialStoryboardConfig;
+                    }
+                    setMediaArtState(loadedMediaArtState);
+
+                    setVisualArtState(projectData.visualArtState || initialVisualArtState);
+
+                    const panelsToLoad = projectData.storyboardPanels || [];
+                    const panelsWithBlobUrls = await Promise.all(
+                        panelsToLoad.map(async (panel: StoryboardPanel) => {
+                            if (panel.videoUrl && panel.videoUrl.startsWith('data:')) {
+                                try {
+                                    const response = await fetch(panel.videoUrl);
+                                    const blob = await response.blob();
+                                    const blobUrl = URL.createObjectURL(blob);
+                                    return { ...panel, videoUrl: blobUrl };
+                                } catch (e) {
+                                    return { ...panel, videoUrl: 'error', videoError: 'Failed to load video from project file.' };
+                                }
+                            }
+                            return panel;
+                        })
+                    );
+                    setStoryboardPanels(panelsWithBlobUrls);
+                } catch (err: any) {
+                    console.error("Failed to import project:", err);
+                    setError(err.message || t('errors.projectImport'));
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
     
     // Media Art Handlers
     const handleGenerateMediaArtScenes = async () => {
@@ -515,41 +513,46 @@ const App: React.FC = () => {
         setMediaArtState(s => ({ ...s, panels: [] }));
 
         try {
-            const { sourceImage, style, styleParams } = mediaArtState;
-            // For now, use text generation to create media art panels
-            const styleDescription = style.replace(/_/g, ' ').toLowerCase();
-            const prompt = `Create a 4-scene artistic transformation of an image (${sourceImage.title}) using the ${styleDescription} style.
-    Language: ${language}
-    Return exactly 4 scene descriptions that artistically transform the original image.`;
-            const panelText = await aiService.generateText({
-                prompt,
-                model: 'gemini-2.5-flash',
-                temperature: 0.9
-            });
-            const panels = panelText.split('\n\n').filter(p => p.trim()).slice(0, 4).map(description => ({ description }));
-            const initialPanels: StoryboardPanel[] = panels.map(p => ({ ...p, isLoadingImage: true, sceneDuration: 4 }));
-            setMediaArtState(s => ({ ...s, panels: initialPanels }));
-            
-            let currentPanels = [...initialPanels];
-            for (let i = 0; i < panels.length; i++) {
-                try {
-                    const imageUrls = await aiService.generateImage({
-                        prompt: panels[i].description,
-                        model: 'flux-pro',
-                        aspectRatio: AspectRatio.LANDSCAPE,
-                        count: 1
-                    });
-                    const imageBase64 = imageUrls[0];
-                    // Check if it's already a data URL or a placeholder URL
-                    const imageUrl = imageBase64.startsWith('data:') || imageBase64.startsWith('http') 
-                        ? imageBase64 
-                        : `data:image/jpeg;base64,${imageBase64}`;
-                    currentPanels[i] = { ...currentPanels[i], imageUrl, isLoadingImage: false };
-                } catch (imgErr) {
-                    currentPanels[i] = { ...currentPanels[i], imageUrl: 'error', isLoadingImage: false };
-                }
-                setMediaArtState(s => ({ ...s, panels: [...currentPanels] }));
+            const { sourceImage, style, styleParams, config } = mediaArtState;
+            // Step 1: Generate keyframe prompts
+            const keyframePrompts = await geminiService.generateMediaArtKeyframePrompts(sourceImage, style, styleParams, config);
+            if (keyframePrompts.length < 2) {
+                throw new Error("Not enough keyframe prompts were generated to create transitions.");
             }
+
+            // Step 2: Generate keyframe images sequentially to avoid rate limiting.
+            let previousImage: string;
+            try {
+                const img0 = await geminiService.generateImageForPanel(keyframePrompts[0], { ...config });
+                previousImage = `data:image/jpeg;base64,${img0}`;
+            } catch (e: any) {
+                const isQuota = e.message?.includes('429') || e.toString().includes('429');
+                previousImage = isQuota ? 'quota_error' : 'error';
+            }
+
+            // Generate subsequent images and create panels progressively
+            for (let i = 1; i < keyframePrompts.length; i++) {
+                let currentImage: string;
+                 try {
+                    const img = await geminiService.generateImageForPanel(keyframePrompts[i], { ...config });
+                    currentImage = `data:image/jpeg;base64,${img}`;
+                } catch (e: any) {
+                    const isQuota = e.message?.includes('429') || e.toString().includes('429');
+                    currentImage = isQuota ? 'quota_error' : 'error';
+                }
+
+                const newPanel: StoryboardPanel = {
+                    description: keyframePrompts[i],
+                    imageUrl: previousImage,
+                    endImageUrl: currentImage,
+                    isLoadingImage: false,
+                    sceneDuration: 5,
+                };
+
+                setMediaArtState(s => ({ ...s, panels: [...s.panels, newPanel] }));
+                previousImage = currentImage;
+            }
+
         } catch (e: any) {
             setMediaArtError(e.message || t('errors.mediaArtGeneration'));
         } finally {
@@ -557,27 +560,25 @@ const App: React.FC = () => {
         }
     };
     
-    const handleRegenerateMediaArtImage = async (index: number) => {
+    const handleRegenerateMediaArtVideo = async (index: number) => {
+        const panel = mediaArtState.panels[index];
+        if (!panel.imageUrl || !panel.imageUrl.startsWith('data:image')) return;
+
         const panels = [...mediaArtState.panels];
-        if (!panels[index]) return;
-    
-        const updatedPanels = [...panels];
-        updatedPanels[index] = { ...updatedPanels[index], imageUrl: undefined, isLoadingImage: true };
-        setMediaArtState(s => ({ ...s, panels: updatedPanels }));
-    
+        panels[index] = { ...panels[index], videoUrl: undefined, isLoadingVideo: true, videoError: null };
+        setMediaArtState(s => ({ ...s, panels }));
+
         try {
-            const imageUrls = await aiService.generateImage({
-                prompt: updatedPanels[index].description,
-                model: 'flux-pro',
-                aspectRatio: AspectRatio.LANDSCAPE,
-                count: 1
-            });
-            const imageBase64 = imageUrls[0];
-            updatedPanels[index] = { ...updatedPanels[index], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
-        } catch (e) {
-            updatedPanels[index] = { ...updatedPanels[index], imageUrl: 'error', isLoadingImage: false };
+            const imageBase64 = panel.imageUrl.split(',')[1];
+            // The panel description is now the prompt for the *end* frame, which is what the video model needs.
+            const videoUrl = await geminiService.generateVideoForPanel(panel.description, imageBase64, mediaArtState.config.videoModel, true);
+            panels[index].videoUrl = videoUrl;
+        } catch (e: any) {
+            panels[index].videoUrl = 'error';
+            panels[index].videoError = e.message || t('errors.videoGeneration');
         } finally {
-            setMediaArtState(s => ({ ...s, panels: [...updatedPanels] }));
+            panels[index].isLoadingVideo = false;
+            setMediaArtState(s => ({ ...s, panels: [...panels] }));
         }
     };
 
@@ -585,11 +586,8 @@ const App: React.FC = () => {
     const handleGenerateVisualArt = async () => {
         setVisualArtState(s => ({ ...s, isLoading: true, error: null, resultVideoUrl: null }));
         try {
-            const resultUrl = await aiService.generateVideo({
-                prompt: `Create a visual art video with ${visualArtState.effect} effects based on: ${visualArtState.inputText}`,
-                model: 'luma-dream-machine',
-                duration: 5
-            });
+            const { inputText, effect, sourceImage } = visualArtState;
+            const resultUrl = await geminiService.generateVisualArtVideo(inputText, effect, sourceImage);
             setVisualArtState(s => ({ ...s, resultVideoUrl: resultUrl }));
         } catch (e: any) {
             setVisualArtState(s => ({ ...s, error: e.message || t('errors.visualArtGeneration') }));
@@ -598,7 +596,7 @@ const App: React.FC = () => {
         }
     };
 
-    if (!hasApiKeys()) {
+    if (!API_KEY) {
         return <ApiKeyInstructions />;
     }
 
@@ -609,8 +607,8 @@ const App: React.FC = () => {
                     <Header 
                         onOpenGallery={handleOpenGallery} 
                         onNewProject={handleNewProject} 
-                        onImport={() => {}} 
-                        onOpenApiKeys={() => setIsApiKeyManagerOpen(true)}
+                        onImport={handleImportProject} 
+                        onExportProject={handleExportProject}
                     />
                     <div className="mt-12">
                         <ModeSwitcher mode={mode} setMode={setMode} />
@@ -632,50 +630,13 @@ const App: React.FC = () => {
                         {mode === AppMode.STORYBOARD && (
                             <div className="max-w-5xl mx-auto">
                                 {!storyboardPanels.length && !isGeneratingStoryboard && (
-                                    <>
-                                        <div className="flex justify-center mb-6">
-                                            <button
-                                                onClick={() => setIsProfessionalMode(!isProfessionalMode)}
-                                                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                                                    isProfessionalMode
-                                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
-                                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                                                }`}
-                                            >
-                                                {isProfessionalMode ? '🎬 Professional Mode' : '✨ Standard Mode'}
-                                            </button>
-                                        </div>
-                                        {isProfessionalMode ? (
-                                            <div className="mb-8">
-                                                <ProfessionalStoryboardSettings
-                                                    config={storyboardConfig}
-                                                    setConfig={setStoryboardConfig}
-                                                    characters={characters}
-                                                    setCharacters={setCharacters}
-                                                    styleGuide={styleGuide}
-                                                    setStyleGuide={setStyleGuide}
-                                                />
-                                                <div className="mt-6">
-                                                    <StoryboardInputForm
-                                                        onGenerate={handleGenerateStoryboard}
-                                                        isLoading={isGeneratingStoryboard}
-                                                        config={storyboardConfig}
-                                                        setConfig={setStoryboardConfig}
-                                                        onShowSampleGallery={() => handleShowSampleGallery('story')}
-                                                        hideSettings={true}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <StoryboardInputForm
-                                                onGenerate={handleGenerateStoryboard}
-                                                isLoading={isGeneratingStoryboard}
-                                                config={storyboardConfig}
-                                                setConfig={setStoryboardConfig}
-                                                onShowSampleGallery={() => handleShowSampleGallery('story')}
-                                            />
-                                        )}
-                                    </>
+                                    <StoryboardInputForm
+                                        onGenerate={handleGenerateStoryboard}
+                                        isLoading={isGeneratingStoryboard}
+                                        config={storyboardConfig}
+                                        setConfig={setStoryboardConfig}
+                                        onShowSampleGallery={() => handleShowSampleGallery('story')}
+                                    />
                                 )}
                                 {error && <p className="text-red-400 mt-4">{error}</p>}
                                 {(isGeneratingStoryboard || storyboardPanels.length > 0) && (
@@ -692,6 +653,8 @@ const App: React.FC = () => {
                                         onRegenerateImage={handleRegenerateImage}
                                         onDeletePanel={(index) => setStoryboardPanels(storyboardPanels.filter((_, i) => i !== index))}
                                         isGeneratingImages={isGeneratingImages}
+                                        onExportPdf={handleExportPdf}
+                                        isExportingPdf={isExportingPdf}
                                     />
                                 )}
                                 <VideoDisplay panels={storyboardPanels} />
@@ -699,17 +662,16 @@ const App: React.FC = () => {
                         )}
                         {mode === AppMode.MEDIA_ART && (
                             <div className="max-w-5xl mx-auto">
-                                {/* FIX: Removed unused props (`onGenerateClip`, `onGenerateAllClips`, `onSave`, `onExport`, `canSave`) to align with the component's defined interface and fix the type error. */}
                                 <MediaArtGenerator 
                                     state={mediaArtState}
                                     setState={setMediaArtState}
                                     onOpenImageSelector={() => setIsImageSelectorOpen(true)}
                                     onGenerateScenes={handleGenerateMediaArtScenes}
-                                    onRegenerateImage={handleRegenerateMediaArtImage}
-                                    onDeletePanel={(index) => setMediaArtState(s => ({ ...s, panels: s.panels.filter((_, i) => i !== index)}))}
+                                    onRegenerateVideo={handleRegenerateMediaArtVideo}
                                     isLoading={isGeneratingMediaArtScenes}
                                     error={mediaArtError}
                                 />
+                                <VideoDisplay panels={mediaArtState.panels} />
                             </div>
                         )}
                          {mode === AppMode.VISUAL_ART && (
@@ -750,10 +712,6 @@ const App: React.FC = () => {
                 onLoad={() => {}} // Simplified for now
                 onDelete={() => {}} // Simplified for now
                 onExport={() => {}} // Simplified for now
-            />
-            <ApiKeyManager
-                isOpen={isApiKeyManagerOpen}
-                onClose={() => setIsApiKeyManagerOpen(false)}
             />
             <ImageSelectionModal
                 isOpen={isImageSelectorOpen}

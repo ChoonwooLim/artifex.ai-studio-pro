@@ -72,9 +72,6 @@ export interface DescriptionConfig {
     targetAudience: string;
     tone: Tone;
     language: string;
-    textModel: string;
-    imageModel: string;
-    videoModel: string;
 }
 
 export interface StoryboardConfig {
@@ -92,6 +89,7 @@ export interface StoryboardConfig {
 export interface StoryboardPanel {
     description: string;
     imageUrl?: string;
+    endImageUrl?: string;
     isLoadingImage?: boolean;
     videoUrl?: string;
     isLoadingVideo?: boolean;
@@ -206,10 +204,12 @@ export interface MediaArtState {
     style: MediaArtStyle;
     styleParams: MediaArtStyleParams;
     panels: StoryboardPanel[];
+    config: StoryboardConfig;
 }
 
 export interface VisualArtState {
     inputText: string;
+    sourceImage: MediaArtSourceImage | null;
     effect: VisualArtEffect;
     resultVideoUrl: string | null;
     isLoading: boolean;

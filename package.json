@@ -6,20 +6,25 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check-ai-models": "tsx scripts/checkModelUpdates.ts --check",
+    "update-ai-models": "tsx scripts/checkModelUpdates.ts --update",
+    "update-ai-docs": "tsx scripts/checkModelUpdates.ts --docs",
+    "ai-model-report": "tsx scripts/checkModelUpdates.ts --report",
+    "check-sdk-versions": "tsx scripts/checkSDKVersions.ts",
+    "update-sdks": "npm update && npm audit fix",
+    "full-update-check": "npm run check-ai-models && npm run check-sdk-versions"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.0",
     "@google/generative-ai": "^0.24.1",
-    "openai": "^4.50.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "replicate": "^0.30.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "tsx": "^4.7.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

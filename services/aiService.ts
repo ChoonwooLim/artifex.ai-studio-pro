@@ -193,25 +193,57 @@ class AIService {
             }
         } catch (error: any) {
             console.error(`Error generating image with ${provider}:`, error);
+            
+            // Try fallback to other available services
+            if (provider === 'google' || options.model.includes('imagen')) {
+                // Try OpenAI DALL-E if available
+                if (this.openaiService.isConfigured()) {
+                    console.log('Falling back to OpenAI DALL-E for image generation');
+                    return await this.openaiService.generateImage({
+                        ...options,
+                        model: 'dall-e-3'
+                    });
+                }
+                // Try Replicate if available
+                if (this.replicateService.isConfigured()) {
+                    console.log('Falling back to Replicate for image generation');
+                    return await this.replicateService.generateImage({
+                        ...options,
+                        model: 'stable-diffusion-xl'
+                    });
+                }
+            }
+            
             throw error;
         }
     }
 
     private async generateGoogleImage(options: GenerateImageOptions): Promise<string[]> {
         // Google Imagen API is not yet publicly available
-        // Automatically redirect to Replicate for image generation
-        console.log('Google Imagen not available, redirecting to Replicate service');
-        if (!this.replicateService.isConfigured()) {
-            throw new Error(
-                'Google Imagen API is not yet publicly available. ' +
-                'Please configure Replicate API key or use DALL-E models with OpenAI API key.'
-            );
+        console.log('Google Imagen not available, attempting automatic fallback');
+        
+        // Try OpenAI first if configured
+        if (this.openaiService.isConfigured()) {
+            console.log('Redirecting to OpenAI DALL-E service');
+            return await this.openaiService.generateImage({
+                ...options,
+                model: 'dall-e-3'
+            });
         }
-        // Use Stable Diffusion XL as fallback
-        return await this.replicateService.generateImage({
-            ...options,
-            model: 'stable-diffusion-xl'
-        });
+        
+        // Try Replicate if configured
+        if (this.replicateService.isConfigured()) {
+            console.log('Redirecting to Replicate service');
+            return await this.replicateService.generateImage({
+                ...options,
+                model: 'stable-diffusion-xl'
+            });
+        }
+        
+        throw new Error(
+            'Google Imagen API is not yet publicly available. ' +
+            'Please configure either OpenAI API key (for DALL-E) or Replicate API key for image generation.'
+        );
     }
 
     async generateVideo(options: GenerateVideoOptions): Promise<string> {

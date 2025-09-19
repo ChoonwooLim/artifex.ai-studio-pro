@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { MediaArtState, MediaArtStyle, MediaArtStyleParams, DataCompositionParams, DigitalNatureParams, AiDataSculptureParams, LightAndSpaceParams, KineticMirrorsParams, GenerativeBotanyParams, QuantumPhantasmParams, ArchitecturalProjectionParams } from '../types';
+import { MediaArtState, MediaArtStyle, MediaArtStyleParams, DataCompositionParams, DigitalNatureParams, AiDataSculptureParams, LightAndSpaceParams, KineticMirrorsParams, GenerativeBotanyParams, QuantumPhantasmParams, ArchitecturalProjectionParams, StoryboardConfig } from '../types';
 import { MEDIA_ART_STYLE_OPTIONS } from '../constants';
 import { useTranslation } from '../i18n/LanguageContext';
 import LoadingSpinner from './LoadingSpinner';
 import UploadIcon from './icons/UploadIcon';
-import RefreshIcon from './icons/RefreshIcon';
-import DeleteIcon from './icons/DeleteIcon';
 import DownloadIcon from './icons/DownloadIcon';
+import StoryboardSettings from './StoryboardSettings';
 
 declare var jspdf: any;
 declare var html2canvas: any;
@@ -16,8 +15,7 @@ interface MediaArtGeneratorProps {
     setState: React.Dispatch<React.SetStateAction<MediaArtState>>;
     onOpenImageSelector: () => void;
     onGenerateScenes: () => void;
-    onRegenerateImage: (index: number) => void;
-    onDeletePanel: (index: number) => void;
+    onRegenerateVideo: (index: number) => void;
     isLoading: boolean;
     error: string | null;
 }
@@ -135,14 +133,14 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
     setState,
     onOpenImageSelector,
     onGenerateScenes,
-    onRegenerateImage,
-    onDeletePanel,
+    onRegenerateVideo,
     isLoading,
     error,
 }) => {
     const { t } = useTranslation();
     const { sourceImage, style, styleParams, panels } = state;
     const [isExportingPdf, setIsExportingPdf] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
 
     const handleStyleChange = (newStyle: MediaArtStyle) => {
         const styleOption = MEDIA_ART_STYLE_OPTIONS.find(opt => opt.value === newStyle);
@@ -161,63 +159,108 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
         }));
     };
 
-    const handleExportPdf = async () => {
-        if (panels.length === 0 || panels.some(p => p.isLoadingImage)) return;
-        setIsExportingPdf(true);
+    const handleConfigChange = (newConfig: StoryboardConfig) => {
+        setState(s => ({ ...s, config: newConfig }));
+    };
 
+    const handleExportPdf = async () => {
+        if (panels.length === 0) return;
+        setIsExportingPdf(true);
+        const pdfContainer = document.createElement('div');
         try {
             const { jsPDF } = jspdf;
             const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            const pdfWidth = 210;
-            const pdfHeight = 297;
-            const margin = 15;
-            const contentWidth = pdfWidth - (margin * 2);
-            let yPos = margin;
+            const pdfWidthMm = 210;
+            const pdfHeightMm = 297;
+            const marginMm = 15;
 
-            // Cover page
-            pdf.setFillColor(15, 23, 42); // slate-900
-            pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
-            pdf.setFontSize(28);
-            pdf.setTextColor(255, 255, 255);
-            pdf.text('Media Art', pdfWidth / 2, 40, { align: 'center' });
-            if (sourceImage) {
-                pdf.setFontSize(14);
-                pdf.setTextColor(148, 163, 184); // slate-400
-                pdf.text(`Source: ${sourceImage.title}`, pdfWidth / 2, 50, { align: 'center' });
+            pdfContainer.style.position = 'absolute';
+            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.top = '0px';
+            const pageWidthPx = 794;
+            const pageHeightPx = 1123;
+            pdfContainer.style.width = `${pageWidthPx}px`;
+            pdfContainer.style.height = `${pageHeightPx}px`;
+            pdfContainer.style.fontFamily = "'Noto Sans KR', 'Inter', sans-serif";
+            document.body.appendChild(pdfContainer);
+
+            // --- Cover Page ---
+            const sourceImageInfo = sourceImage ? `<p style="font-size: 16px; color: #94a3b8; margin-top: 16px;">Source: ${sourceImage.title}</p>` : '';
+            pdfContainer.innerHTML = `
+                <div style="background-color: #0f172a; color: white; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; box-sizing: border-box; text-align: center;">
+                    <h1 style="font-size: 36px; font-weight: bold; line-height: 1.3;">Media Art Storyboard</h1>
+                    ${sourceImageInfo}
+                </div>
+            `;
+            const coverCanvas = await html2canvas(pdfContainer.firstElementChild as HTMLElement, { scale: 2 });
+            pdf.addImage(coverCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+            // --- Storyboard Pages ---
+            if (panels.length > 0) pdf.addPage();
+            
+            const pageWrapper = document.createElement('div');
+            pageWrapper.style.backgroundColor = '#0f172a';
+            pageWrapper.style.color = 'white';
+            pageWrapper.style.width = '100%';
+            pageWrapper.style.minHeight = '100%';
+            pageWrapper.style.padding = `${(marginMm / pdfWidthMm) * pageWidthPx}px`;
+            pageWrapper.style.boxSizing = 'border-box';
+            pdfContainer.innerHTML = '';
+            pdfContainer.appendChild(pageWrapper);
+
+            for (let i = 0; i < panels.length; i++) {
+                const panel = panels[i];
+                const panelEl = document.createElement('div');
+                panelEl.innerHTML = `
+                    <div style="border: 1px solid #334155; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+                        <div style="padding: 12px; background-color: #1e293b;">
+                            <h3 style="font-size: 16px; font-weight: bold;">Transition ${i + 1}</h3>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background-color: #334155;">
+                            <div style="position: relative; background-color: #0f172a; aspect-ratio: 16/9;">
+                                <div style="position: absolute; top: 8px; left: 8px; background-color: rgba(0,0,0,0.5); color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">Start Frame</div>
+                                <img src="${panel.imageUrl || ''}" style="width: 100%; height: 100%; object-fit: cover;" />
+                            </div>
+                            <div style="position: relative; background-color: #0f172a; aspect-ratio: 16/9;">
+                                 <div style="position: absolute; top: 8px; left: 8px; background-color: rgba(0,0,0,0.5); color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">End Frame</div>
+                                <img src="${panel.endImageUrl || ''}" style="width: 100%; height: 100%; object-fit: cover;" />
+                            </div>
+                        </div>
+                        <div style="padding: 16px; background-color: #1e293b;">
+                            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;">Transition Prompt:</p>
+                            <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; word-wrap: break-word;">${panel.description}</p>
+                        </div>
+                    </div>`;
+
+                pageWrapper.appendChild(panelEl);
+
+                if (pageWrapper.offsetHeight > pageHeightPx && pageWrapper.children.length > 1) {
+                    pageWrapper.removeChild(panelEl);
+                    const pageCanvas = await html2canvas(pageWrapper, { scale: 2 });
+                    pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+                    pdf.addPage();
+                    pageWrapper.innerHTML = '';
+                    pageWrapper.appendChild(panelEl);
+                }
+            }
+
+            if (pageWrapper.children.length > 0) {
+                const lastPageCanvas = await html2canvas(pageWrapper, { scale: 2 });
+                pdf.addImage(lastPageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
             }
             
-            const panelElements = document.querySelectorAll('.media-art-panel-pdf');
-
-            for (let i = 0; i < panelElements.length; i++) {
-                const panelEl = panelElements[i] as HTMLElement;
-                const canvas = await html2canvas(panelEl, { backgroundColor: '#1e293b', scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-                const imgProps = pdf.getImageProperties(imgData);
-                const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
-
-                const requiredSpace = imgHeight + 10; // Image height + margin
-                if (yPos > margin && yPos + requiredSpace > pdfHeight - margin) {
-                    pdf.addPage();
-                    yPos = margin;
-                }
-                
-                pdf.addImage(imgData, 'PNG', margin, yPos, contentWidth, imgHeight);
-                yPos += imgHeight + 10;
-            }
-
             const safeTitle = sourceImage?.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'export';
             pdf.save(`media-art-${safeTitle}.pdf`);
-
         } catch (err) {
             console.error("Failed to export PDF:", err);
         } finally {
+            if (pdfContainer) document.body.removeChild(pdfContainer);
             setIsExportingPdf(false);
         }
     };
 
-    const selectedStyleOption = MEDIA_ART_STYLE_OPTIONS.find(opt => opt.value === style);
     const isGenerateDisabled = isLoading || !sourceImage;
-    const canExportPdf = panels.length > 0 && !panels.some(p => p.isLoadingImage || !p.imageUrl || p.imageUrl === 'error');
+    const canExportPdf = panels.length > 0 && !panels.some(p => !p.imageUrl || p.imageUrl === 'error');
 
     return (
         <div className="space-y-8">
@@ -273,6 +316,24 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
                 <StyleParameterControls style={style} params={styleParams} onChange={handleParamChange} />
             </div>
 
+            {/* --- Advanced Settings --- */}
+            <div className="flex justify-between items-center pt-2">
+                <button
+                    type="button"
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="text-sm text-blue-400 hover:text-blue-300"
+                >
+                    {showSettings ? t('storyboardForm.hideSettings') : t('storyboardForm.showSettings')}
+                </button>
+            </div>
+
+            {showSettings && (
+                <div className="animate-fade-in">
+                    <StoryboardSettings config={state.config} setConfig={handleConfigChange} />
+                </div>
+            )}
+
+
             {/* --- Generate Button --- */}
             <div className="pt-2">
                 <button
@@ -292,7 +353,7 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
             {error && <p className="text-red-400 mt-4 text-center">{error}</p>}
 
             {/* --- Results --- */}
-            {(isLoading || panels.length > 0) && (
+            {(panels.length > 0 || isLoading) && (
                  <div className="mt-8 animate-fade-in">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl font-bold text-slate-200">{t('mediaArt.resultsTitle')}</h2>
@@ -316,37 +377,90 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                          {panels.map((panel, index) => (
-                             <div key={index} className="media-art-panel-pdf bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden flex flex-col">
-                                 <div className="relative aspect-video bg-slate-800 flex items-center justify-center">
-                                    <div className="absolute top-2 left-2 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded">
-                                        {t('storyboardDisplay.scene', { index: index + 1 })}
-                                    </div>
-                                    {panel.isLoadingImage && (
-                                        <div className="flex flex-col items-center text-slate-400">
-                                            <LoadingSpinner />
-                                            <p className="text-xs mt-2">{t('storyboardDisplay.generatingImage')}</p>
-                                        </div>
-                                    )}
-                                    {panel.imageUrl && panel.imageUrl !== 'error' && (
-                                        <img src={panel.imageUrl} alt={`Panel ${index + 1}`} className="w-full h-full object-cover" />
-                                    )}
-                                     {panel.imageUrl === 'error' && (
-                                        <div className="text-red-400 text-center p-4">
-                                            <p className="font-semibold">Oops!</p>
-                                            <p className="text-xs">{t('storyboardDisplay.imageError')}</p>
-                                        </div>
-                                    )}
+                             <div key={index} className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden flex flex-col">
+                                 <div className="p-3">
+                                     <h4 className="text-sm font-semibold text-slate-300">{t('mediaArt.transition')} {index + 1}</h4>
                                  </div>
-                                 <div className="p-4 flex-grow">
-                                     <p className="text-sm text-slate-300 leading-relaxed">{panel.description}</p>
+                                 <div className="grid grid-cols-2 gap-px bg-slate-700">
+                                     <div className="relative aspect-video bg-slate-800 flex flex-col items-center justify-center">
+                                         <p className="absolute top-2 left-2 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded">{t('mediaArt.startFrame')}</p>
+                                        {panel.imageUrl && panel.imageUrl !== 'error' && panel.imageUrl !== 'quota_error' && (
+                                            <img src={panel.imageUrl} alt={`${t('mediaArt.startFrame')} ${index + 1}`} className="w-full h-full object-cover" />
+                                        )}
+                                        {panel.imageUrl === 'error' && (
+                                            <div className="text-red-400 text-center p-2">
+                                                <p className="font-semibold">Oops!</p>
+                                                <p className="text-xs">{t('storyboardDisplay.imageError')}</p>
+                                            </div>
+                                        )}
+                                        {panel.imageUrl === 'quota_error' && (
+                                            <div className="text-yellow-400 text-center p-2">
+                                                <p className="font-semibold">{t('storyboardDisplay.quotaErrorTitle')}</p>
+                                                <p className="text-xs mt-1 text-slate-400">{t('storyboardDisplay.checkPlan')}</p>
+                                            </div>
+                                        )}
+                                     </div>
+                                      <div className="relative aspect-video bg-slate-800 flex flex-col items-center justify-center">
+                                         <p className="absolute top-2 left-2 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded">{t('mediaArt.endFrame')}</p>
+                                        {panel.endImageUrl && panel.endImageUrl !== 'error' && panel.endImageUrl !== 'quota_error' && (
+                                            <img src={panel.endImageUrl} alt={`${t('mediaArt.endFrame')} ${index + 1}`} className="w-full h-full object-cover" />
+                                        )}
+                                        {panel.endImageUrl === 'error' && (
+                                            <div className="text-red-400 text-center p-2">
+                                                <p className="font-semibold">Oops!</p>
+                                                <p className="text-xs">{t('storyboardDisplay.imageError')}</p>
+                                            </div>
+                                        )}
+                                        {panel.endImageUrl === 'quota_error' && (
+                                            <div className="text-yellow-400 text-center p-2">
+                                                <p className="font-semibold">{t('storyboardDisplay.quotaErrorTitle')}</p>
+                                                <p className="text-xs mt-1 text-slate-400">{t('storyboardDisplay.checkPlan')}</p>
+                                            </div>
+                                        )}
+                                     </div>
                                  </div>
-                                  <div className="p-3 border-t border-slate-700 bg-slate-900/30 flex items-center justify-end gap-2">
-                                    <button onClick={() => onRegenerateImage(index)} title={t('tooltips.regenerateImage')} className="p-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors disabled:opacity-50" disabled={panel.isLoadingImage}>
-                                        <RefreshIcon className="w-4 h-4 text-slate-300"/>
-                                    </button>
-                                    <button onClick={() => onDeletePanel(index)} title={t('tooltips.deletePanel')} className="p-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors">
-                                        <DeleteIcon className="w-4 h-4 text-slate-300"/>
-                                    </button>
+                                 <div className="p-4 flex-grow flex flex-col">
+                                     <label htmlFor={`transition-prompt-${index}`} className="text-xs text-slate-400 mb-1 flex-shrink-0">{t('mediaArt.transitionPrompt')}:</label>
+                                     <textarea
+                                        id={`transition-prompt-${index}`}
+                                        readOnly
+                                        value={panel.description}
+                                        className="w-full flex-grow bg-slate-700/50 border border-slate-600 rounded-md p-2 text-sm text-slate-300 leading-relaxed resize-none focus:ring-0 focus:border-slate-600"
+                                     />
+                                 </div>
+                                  <div className="p-3 border-t border-slate-700 bg-slate-900/30 flex items-center justify-between gap-2">
+                                     <div className="flex-grow min-w-0">
+                                         {panel.isLoadingVideo && (
+                                            <div className="h-10 bg-slate-900/50 rounded-lg flex items-center justify-center text-white px-2">
+                                                <LoadingSpinner />
+                                                <p className="text-xs ml-2">{t('storyboardDisplay.generatingClip')}</p>
+                                            </div>
+                                        )}
+                                         {panel.videoUrl === 'error' && (
+                                            <div className="h-10 bg-red-900/50 rounded-lg flex items-center justify-center text-red-300 p-2 text-center">
+                                                <p className="text-xs font-semibold">{t('storyboardDisplay.videoErrorTitle')}</p>
+                                            </div>
+                                        )}
+                                          {panel.videoUrl && panel.videoUrl !== 'error' && !panel.isLoadingVideo && (
+                                            <video
+                                                key={panel.videoUrl}
+                                                src={panel.videoUrl}
+                                                controls
+                                                className="w-full rounded-md max-h-48"
+                                            />
+                                        )}
+                                     </div>
+                                     <div className="flex-shrink-0">
+                                         <button
+                                            onClick={() => onRegenerateVideo(index)}
+                                            title={t('mediaArt.generateTransition')}
+                                            className="p-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors disabled:opacity-50 flex items-center gap-2 text-xs px-3"
+                                            disabled={panel.isLoadingVideo || !panel.imageUrl || panel.imageUrl === 'error' || panel.imageUrl === 'quota_error'}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
+                                            <span className="hidden sm:inline">{t('mediaArt.generateTransition')}</span>
+                                        </button>
+                                     </div>
                                 </div>
                              </div>
                          ))}
