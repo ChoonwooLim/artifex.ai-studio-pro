@@ -79,8 +79,8 @@ export const TEXT_MODEL_OPTIONS: { value: string; label: string; description: st
 
 export const IMAGE_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
     // Google Models (Sep 2025)
-    { value: 'imagen-4', label: '🔷 Imagen 4', description: 'Latest image model with 2K resolution, remarkable clarity.' },
     { value: 'gemini-2.5-flash-image', label: '🔷 Gemini 2.5 Flash Image', description: 'Nano-banana - Multi-image blending, character consistency.' },
+    { value: 'imagen-4', label: '🔷 Imagen 4', description: 'Latest image model with 2K resolution, remarkable clarity.' },
     
     // OpenAI Models
     { value: 'dall-e-3', label: '🟢 DALL·E 3', description: 'OpenAI\'s latest image generation with text rendering.' },

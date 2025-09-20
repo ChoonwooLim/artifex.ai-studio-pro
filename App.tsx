@@ -89,7 +89,7 @@ const App: React.FC = () => {
         mood: Mood.EPIC,
         descriptionLanguage: 'English',
         textModel: 'gemini-2.5-flash',
-        imageModel: 'imagen-4',
+        imageModel: 'gemini-2.5-flash-image',
         videoModel: 'veo-3',
     };
     const [storyboardConfig, setStoryboardConfig] = useState<StoryboardConfig>(initialStoryboardConfig);

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { AspectRatio, DescriptionConfig, StoryboardConfig, VisualStyle, MediaArtStyle, VisualArtEffect, MediaArtSourceImage, MediaArtStyleParams, DataCompositionParams, DigitalNatureParams, AiDataSculptureParams, LightAndSpaceParams, KineticMirrorsParams, GenerativeBotanyParams, QuantumPhantasmParams, ArchitecturalProjectionParams } from "../types";
+import { aiService } from "./aiService";
 
 // Dynamic API key initialization to support both environment variables and localStorage
 let genAI: GoogleGenerativeAI | null = null;
@@ -260,27 +261,62 @@ export const generateImageForPanel = async (description: string, config: { image
 
         const fullPrompt = stylePrompt ? `${description}, ${stylePrompt}` : description;
         
-        // For now, try to use Gemini to generate an image description and return placeholder
-        // Imagen 4 integration requires additional SDK setup
-        const genAI = getGenAI();
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash"
-        });
+        console.log(`Generating image with model: ${config.imageModel}`);
+        console.log(`Image prompt: ${fullPrompt}`);
         
-        // Generate a more detailed image prompt using Gemini
-        const enhancedPromptResult = await model.generateContent({
-            contents: [{
-                role: 'user',
-                parts: [{ 
-                    text: `Create a detailed image generation prompt for: ${fullPrompt}. 
-                    Include specific details about composition, lighting, colors, and style. 
-                    Keep it concise but visually rich.`
+        // Try to use actual AI image generation
+        try {
+            // Get aspect ratio dimensions for image generation
+            const aspectRatios: Record<AspectRatio, [number, number]> = {
+                [AspectRatio.LANDSCAPE]: [1024, 576],  // 16:9
+                [AspectRatio.PORTRAIT]: [576, 1024],   // 9:16
+                [AspectRatio.SQUARE]: [1024, 1024],    // 1:1
+                [AspectRatio.VERTICAL]: [768, 1024],   // 3:4
+                [AspectRatio.CLASSIC]: [1024, 768],    // 4:3
+            };
+            
+            const [width, height] = aspectRatios[config.aspectRatio] || [1024, 576];
+            
+            // Call the actual AI image generation service
+            const images = await aiService.generateImage({
+                prompt: fullPrompt,
+                model: config.imageModel || 'gemini-2.5-flash-image',
+                width,
+                height,
+                aspectRatio: config.aspectRatio
+            });
+            
+            // Return the first generated image
+            if (images && images.length > 0) {
+                console.log("Image generated successfully with model:", config.imageModel);
+                return images[0];
+            }
+            throw new Error("No image generated");
+        } catch (imageError) {
+            console.error("Actual image generation failed:", imageError);
+            console.log("Falling back to placeholder image");
+            
+            // If actual generation fails, generate a better placeholder
+            const genAI = getGenAI();
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-2.5-flash"
+            });
+            
+            // Generate a more detailed image prompt using Gemini
+            const enhancedPromptResult = await model.generateContent({
+                contents: [{
+                    role: 'user',
+                    parts: [{ 
+                        text: `Create a detailed image generation prompt for: ${fullPrompt}. 
+                        Include specific details about composition, lighting, colors, and style. 
+                        Keep it concise but visually rich.`
+                    }]
                 }]
-            }]
-        });
-        
-        const enhancedPrompt = enhancedPromptResult.response.text();
-        console.info("Enhanced image prompt generated:", enhancedPrompt.substring(0, 100) + "...");
+            });
+            
+            const enhancedPrompt = enhancedPromptResult.response.text();
+            console.info("Enhanced image prompt generated:", enhancedPrompt.substring(0, 100) + "...");
+        }
         
         // Create a canvas for generating a proper placeholder image
         const canvas = document.createElement('canvas');
