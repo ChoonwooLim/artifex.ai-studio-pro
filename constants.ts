@@ -62,18 +62,23 @@ export const TEXT_MODEL_OPTIONS: { value: string; label: string; description: st
     { value: 'gemini-2.0-flash-exp', label: '🔷 Gemini 2.0 Flash Exp', description: 'Experimental version with enhanced capabilities.' },
     { value: 'gemini-1.5-pro', label: '🔷 Gemini 1.5 Pro', description: 'Advanced reasoning and long-context understanding.' },
     
-    // OpenAI Models  
-    { value: 'gpt-5', label: '🟢 GPT-5 (Preview)', description: 'OpenAI\'s flagship model - Most advanced reasoning (Limited access).' },
+    // OpenAI Models (As of Sept 2025)
+    { value: 'gpt-5', label: '🟢 GPT-5', description: 'Released Aug 7, 2025 - State-of-the-art in coding, math (94.6% AIME), and reasoning.' },
+    { value: 'gpt-5-mini', label: '🟢 GPT-5 Mini', description: 'Smaller, faster GPT-5 variant with excellent performance.' },
+    { value: 'gpt-5-nano', label: '🟢 GPT-5 Nano', description: 'Most efficient GPT-5 variant for simple tasks.' },
+    { value: 'o4-mini', label: '🟢 o4-mini', description: 'Released Apr 2025 - Successor to o3-mini with multimodal input.' },
+    { value: 'o3', label: '🟢 o3', description: 'Released Jan 2025 - Advanced reasoning with adjustable effort levels.' },
+    { value: 'o3-mini', label: '🟢 o3-mini', description: 'Released Jan 31, 2025 - Efficient reasoning model.' },
     { value: 'gpt-4o', label: '🟢 GPT-4o', description: 'Optimized GPT-4 with vision capabilities.' },
     { value: 'gpt-4o-mini', label: '🟢 GPT-4o Mini', description: 'Lightweight version of GPT-4o.' },
-    { value: 'o1-preview', label: '🟢 o1 Preview', description: 'Advanced reasoning model for complex tasks.' },
-    { value: 'o1-mini', label: '🟢 o1 Mini', description: 'Smaller, faster version of o1.' },
     
-    // Anthropic Models
-    { value: 'claude-4-opus', label: '🔴 Claude 4 Opus', description: 'Most powerful Claude model for complex tasks.' },
-    { value: 'claude-4-sonnet', label: '🔴 Claude 4 Sonnet', description: 'Balanced performance and speed.' },
-    { value: 'claude-3.7-sonnet', label: '🔴 Claude 3.7 Sonnet', description: 'Latest Sonnet release with improvements.' },
-    { value: 'claude-3.5-haiku', label: '🔴 Claude 3.5 Haiku', description: 'Fast and efficient for simple tasks.' },
+    // Anthropic Models (As of Sept 2025)  
+    { value: 'claude-opus-4.1', label: '🔴 Claude Opus 4.1', description: 'Released Aug 5, 2025 - Best coding (74.5% SWE-bench), agentic tasks.' },
+    { value: 'claude-opus-4', label: '🔴 Claude Opus 4', description: 'Released May 22, 2025 - World\'s best coding model (72.5% SWE-bench).' },
+    { value: 'claude-sonnet-4', label: '🔴 Claude Sonnet 4', description: 'Released May 22, 2025 - Superior coding and reasoning, precise instructions.' },
+    { value: 'claude-3.7-sonnet', label: '🔴 Claude 3.7 Sonnet', description: 'Released Feb 24, 2025 - Hybrid reasoning with thinking modes.' },
+    { value: 'claude-3.5-sonnet', label: '🔴 Claude 3.5 Sonnet', description: 'Updated version with computer use capabilities.' },
+    { value: 'claude-3.5-haiku', label: '🔴 Claude 3.5 Haiku', description: 'Fast and cost-effective for simple tasks.' },
 ];
 
 export const IMAGE_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [

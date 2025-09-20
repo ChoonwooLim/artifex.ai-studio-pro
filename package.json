@@ -13,7 +13,8 @@
     "ai-model-report": "tsx scripts/checkModelUpdates.ts --report",
     "check-sdk-versions": "tsx scripts/checkSDKVersions.ts",
     "update-sdks": "npm update && npm audit fix",
-    "full-update-check": "npm run check-ai-models && npm run check-sdk-versions"
+    "full-update-check": "npm run check-ai-models && npm run check-sdk-versions",
+    "verify-models": "tsx scripts/verifyModels.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.63.0",
