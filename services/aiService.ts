@@ -129,8 +129,8 @@ class AIService {
         
         // Google models - include version numbers
         if (modelLower.includes('gemini') || modelLower.includes('palm') || 
-            modelLower.includes('2.5') || modelLower.includes('2.0') || 
-            modelLower.includes('1.5')) {
+            modelLower.includes('imagen') || modelLower.includes('2.5') || 
+            modelLower.includes('2.0') || modelLower.includes('1.5')) {
             return 'google';
         }
         
@@ -340,6 +340,14 @@ class AIService {
     }
 
     async generateImage(options: GenerateImageOptions): Promise<string[]> {
+        console.log('generateImage called with options:', {
+            model: options.model,
+            width: options.width,
+            height: options.height,
+            aspectRatio: options.aspectRatio,
+            aspectRatioType: typeof options.aspectRatio,
+            count: options.count
+        });
         const provider = this.getProviderForModel(options.model);
         console.log(`Using ${provider} provider for image model ${options.model}`);
 
@@ -375,59 +383,20 @@ class AIService {
         } catch (error: any) {
             console.error(`Error generating image with ${provider}:`, error);
             
-            // Try fallback to other available services
-            if (provider === 'google' || options.model.includes('imagen')) {
-                // Try OpenAI DALL-E if available
-                const openaiService = await this.getOpenAIService();
-                if (openaiService.isConfigured()) {
-                    console.log('Falling back to OpenAI DALL-E for image generation');
-                    return await openaiService.generateImage({
-                        ...options,
-                        model: 'dall-e-3'
-                    });
-                }
-                // Try Replicate if available
-                const replicateService = await this.getReplicateService();
-                if (await replicateService.isConfigured()) {
-                    console.log('Falling back to Replicate for image generation');
-                    return await replicateService.generateImage({
-                        ...options,
-                        model: 'stable-diffusion-xl'
-                    });
-                }
-            }
-            
+            // No automatic fallback - respect the user's model choice
             throw error;
         }
     }
 
     private async generateGoogleImage(options: GenerateImageOptions): Promise<string[]> {
-        // Google Imagen API is not yet publicly available
-        console.log('Google Imagen not available, attempting automatic fallback');
-        
-        // Try OpenAI first if configured
-        const openaiSvc = await this.getOpenAIService();
-        if (openaiSvc.isConfigured()) {
-            console.log('Redirecting to OpenAI DALL-E service');
-            return await openaiSvc.generateImage({
-                ...options,
-                model: 'dall-e-3'
-            });
-        }
-        
-        // Try Replicate if configured
-        const replicateSvc = await this.getReplicateService();
-        if (await replicateSvc.isConfigured()) {
-            console.log('Redirecting to Replicate service');
-            return await replicateSvc.generateImage({
-                ...options,
-                model: 'stable-diffusion-xl'
-            });
-        }
+        // Google Imagen and Gemini image models are not available via API
+        // Return error instead of automatic fallback
+        console.error('Google image generation models (Imagen, Gemini Flash Image) are not available via API');
         
         throw new Error(
-            'Google Imagen API is not yet publicly available. ' +
-            'Please configure either OpenAI API key (for DALL-E) or Replicate API key for image generation.'
+            `The model "${options.model}" is not available via Google AI API. ` +
+            'Google image generation models are currently not accessible through the API. ' +
+            'Please select a different image model like DALL-E 3 or Stable Diffusion.'
         );
     }
 

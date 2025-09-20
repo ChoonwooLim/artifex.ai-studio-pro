@@ -139,18 +139,24 @@ const storyboardPanelSchema = {
 };
 
 export const generateStoryboard = async (idea: string, config: StoryboardConfig): Promise<{ description: string }[]> => {
+    console.log('generateStoryboard called with config:', config);
+    console.log('Scene count requested:', config.sceneCount);
+    console.log('AspectRatio value:', config.aspectRatio);
+    console.log('AspectRatio type:', typeof config.aspectRatio);
+    
     const prompt = `Create a storyboard for a short video based on this idea: "${idea}".
 
     **Instructions:**
-    1.  Generate exactly ${config.sceneCount} scenes.
+    1.  Generate exactly ${config.sceneCount} scenes. NO MORE, NO LESS than ${config.sceneCount} scenes.
     2.  The overall mood should be ${config.mood}.
     3.  The visual style should be ${config.visualStyle}.
     4.  The total video length is approximately ${config.videoLength}, so pace the scenes accordingly.
     5.  The output language for the descriptions must be ${config.descriptionLanguage}.
     6.  For each scene, provide a detailed, visually rich description suitable for an AI image generation model. Describe the camera angle, subject, setting, action, and atmosphere.
     7.  IMPORTANT: Use simple scene numbers like "1", "2", "3" etc. Do not use scientific notation or decimal numbers.
+    8.  CRITICAL: You must return EXACTLY ${config.sceneCount} scenes, not more, not less.
     
-    Return the result as a JSON array of objects with sceneNumber and description fields.`;
+    Return the result as a JSON array of EXACTLY ${config.sceneCount} objects with sceneNumber and description fields.`;
 
     try {
         // Try with structured output first
@@ -169,7 +175,11 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
         
         const parsed = safeJsonParse(response.text());
         if (parsed && Array.isArray(parsed)) {
-            return parsed.map(p => ({ description: p.description }));
+            console.log('Generated scenes count:', parsed.length);
+            // Ensure we only return the requested number of scenes
+            const limitedScenes = parsed.slice(0, config.sceneCount);
+            console.log('Returning scenes count:', limitedScenes.length);
+            return limitedScenes.map(p => ({ description: p.description }));
         }
     } catch (error) {
         console.error("Structured output failed, trying fallback:", error);
@@ -194,7 +204,11 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
         
         const parsed = safeJsonParse(response.text());
         if (parsed && Array.isArray(parsed)) {
-            return parsed.map(p => ({ description: p.description }));
+            console.log('Generated scenes count:', parsed.length);
+            // Ensure we only return the requested number of scenes
+            const limitedScenes = parsed.slice(0, config.sceneCount);
+            console.log('Returning scenes count:', limitedScenes.length);
+            return limitedScenes.map(p => ({ description: p.description }));
         }
     } catch (fallbackError) {
         console.error("Fallback also failed:", fallbackError);
@@ -276,6 +290,15 @@ export const generateImageForPanel = async (description: string, config: { image
             };
             
             const [width, height] = aspectRatios[config.aspectRatio] || [1024, 576];
+            
+            console.log('Image generation config:', {
+                aspectRatio: config.aspectRatio,
+                aspectRatioType: typeof config.aspectRatio,
+                aspectRatioValue: AspectRatio[config.aspectRatio],
+                width,
+                height,
+                model: config.imageModel
+            });
             
             // Call the actual AI image generation service
             const images = await aiService.generateImage({

@@ -21,6 +21,7 @@ const StoryboardSettings: React.FC<StoryboardSettingsProps> = ({ config, setConf
     const { t } = useTranslation();
     
     const handleConfigChange = (field: keyof StoryboardConfig, value: any) => {
+        console.log(`StoryboardSettings handleConfigChange: field=${field}, value=${value}, type=${typeof value}`);
         const newConfig = { ...config, [field]: value };
         // Ensure scene count is within bounds
         if (field === 'sceneCount') {
@@ -33,6 +34,7 @@ const StoryboardSettings: React.FC<StoryboardSettingsProps> = ({ config, setConf
                 newConfig.sceneCount = numValue;
             }
         }
+        console.log('New config after change:', newConfig);
         setConfig(newConfig);
     };
 

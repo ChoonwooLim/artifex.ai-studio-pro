@@ -199,6 +199,9 @@ const App: React.FC = () => {
 
     // Handlers for Storyboard Mode
     const handleGenerateStoryboard = async (idea: string, config: StoryboardConfig) => {
+        console.log('handleGenerateStoryboard called with config:', config);
+        console.log('Config aspectRatio:', config.aspectRatio, 'type:', typeof config.aspectRatio);
+        console.log('Config imageModel:', config.imageModel);
         setStoryIdea(idea);
         setStoryboardConfig(config);
         setIsGeneratingStoryboard(true);
@@ -327,9 +330,14 @@ const App: React.FC = () => {
     
     const handleSelectSampleStory = (story: SampleStory) => {
         setStoryIdea(story.idea);
-        setStoryboardConfig(story.config);
+        // Preserve user's aspectRatio selection when loading sample story
+        const configWithUserAspectRatio = {
+            ...story.config,
+            aspectRatio: storyboardConfig.aspectRatio  // Keep user's aspectRatio
+        };
+        setStoryboardConfig(configWithUserAspectRatio);
         setIsSampleGalleryOpen(false);
-        handleGenerateStoryboard(story.idea, story.config);
+        handleGenerateStoryboard(story.idea, configWithUserAspectRatio);
     };
 
     // Project Management (DB)
@@ -385,7 +393,12 @@ const App: React.FC = () => {
                     <p style="font-size: 16px; color: #94a3b8; margin-top: 16px;">Storyboard - ${new Date().toLocaleDateString()}</p>
                 </div>
             `;
-            const coverCanvas = await html2canvas(pdfContainer.firstElementChild as HTMLElement, { scale: 2 });
+            const coverCanvas = await html2canvas(pdfContainer.firstElementChild as HTMLElement, { 
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false
+            });
             pdf.addImage(coverCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
 
             // --- Storyboard Pages ---
@@ -406,22 +419,64 @@ const App: React.FC = () => {
                 if (!panel.imageUrl || panel.imageUrl.startsWith('error')) continue;
 
                 const panelEl = document.createElement('div');
-                panelEl.innerHTML = `
-                    <div style="border: 1px solid #334155; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
-                        <div style="padding: 8px 12px; background-color: #1e293b;">
-                            <h3 style="font-size: 16px; font-weight: bold;">Scene #${i + 1}</h3>
-                        </div>
-                        <img src="${panel.imageUrl}" style="width: 100%; height: auto; display: block; aspect-ratio: 16/9; object-fit: cover;" />
-                        <div style="padding: 16px; background-color: #1e293b;">
-                            <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; word-wrap: break-word;">${panel.description}</p>
-                        </div>
-                    </div>`;
+                panelEl.style.marginBottom = '20px';
                 
+                const panelContent = document.createElement('div');
+                panelContent.style.border = '1px solid #334155';
+                panelContent.style.borderRadius = '8px';
+                panelContent.style.overflow = 'hidden';
+                
+                // Title
+                const titleDiv = document.createElement('div');
+                titleDiv.style.padding = '8px 12px';
+                titleDiv.style.backgroundColor = '#1e293b';
+                titleDiv.innerHTML = `<h3 style="font-size: 16px; font-weight: bold;">Scene #${i + 1}</h3>`;
+                panelContent.appendChild(titleDiv);
+                
+                // Image
+                if (panel.imageUrl && !panel.imageUrl.startsWith('error')) {
+                    const imgContainer = document.createElement('div');
+                    const img = document.createElement('img');
+                    img.src = panel.imageUrl;
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    img.style.display = 'block';
+                    img.style.aspectRatio = '16/9';
+                    img.style.objectFit = 'cover';
+                    
+                    // Wait for image to load
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = () => {
+                            console.error('Failed to load image for PDF:', panel.imageUrl);
+                            resolve(null); // Continue even if image fails
+                        };
+                        // Timeout after 5 seconds
+                        setTimeout(() => resolve(null), 5000);
+                    });
+                    
+                    imgContainer.appendChild(img);
+                    panelContent.appendChild(imgContainer);
+                }
+                
+                // Description
+                const descDiv = document.createElement('div');
+                descDiv.style.padding = '16px';
+                descDiv.style.backgroundColor = '#1e293b';
+                descDiv.innerHTML = `<p style="font-size: 14px; line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; word-wrap: break-word;">${panel.description}</p>`;
+                panelContent.appendChild(descDiv);
+                
+                panelEl.appendChild(panelContent);
                 pageWrapper.appendChild(panelEl);
 
                 if (pageWrapper.offsetHeight > pageHeightPx && pageWrapper.children.length > 1) {
                     pageWrapper.removeChild(panelEl);
-                    const pageCanvas = await html2canvas(pageWrapper, { scale: 2 });
+                    const pageCanvas = await html2canvas(pageWrapper, { 
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        logging: false
+                    });
                     pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
 
                     pdf.addPage();
@@ -431,7 +486,12 @@ const App: React.FC = () => {
             }
 
             if (pageWrapper.children.length > 0) {
-                const lastPageCanvas = await html2canvas(pageWrapper, { scale: 2 });
+                const lastPageCanvas = await html2canvas(pageWrapper, { 
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false
+                });
                 pdf.addImage(lastPageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
             }
 

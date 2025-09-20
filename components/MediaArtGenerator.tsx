@@ -192,7 +192,12 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
                     ${sourceImageInfo}
                 </div>
             `;
-            const coverCanvas = await html2canvas(pdfContainer.firstElementChild as HTMLElement, { scale: 2 });
+            const coverCanvas = await html2canvas(pdfContainer.firstElementChild as HTMLElement, { 
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false
+            });
             pdf.addImage(coverCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
 
             // --- Storyboard Pages ---
@@ -236,7 +241,12 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
 
                 if (pageWrapper.offsetHeight > pageHeightPx && pageWrapper.children.length > 1) {
                     pageWrapper.removeChild(panelEl);
-                    const pageCanvas = await html2canvas(pageWrapper, { scale: 2 });
+                    const pageCanvas = await html2canvas(pageWrapper, { 
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false
+                });
                     pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
                     pdf.addPage();
                     pageWrapper.innerHTML = '';
@@ -245,7 +255,12 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
             }
 
             if (pageWrapper.children.length > 0) {
-                const lastPageCanvas = await html2canvas(pageWrapper, { scale: 2 });
+                const lastPageCanvas = await html2canvas(pageWrapper, { 
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false
+                });
                 pdf.addImage(lastPageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
             }
             
