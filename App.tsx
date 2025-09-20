@@ -186,7 +186,7 @@ const App: React.FC = () => {
                 prompt,
                 model: modelToUse,
                 temperature: 0.7,
-                maxTokens: 1000
+                maxTokens: 8192  // Increased for Gemini 2.5 Flash with thinking mode
             });
             
             setDescription(result);

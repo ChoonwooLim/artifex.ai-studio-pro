@@ -260,13 +260,47 @@ class AIService {
                 contents: [{ role: 'user', parts: [{ text: options.prompt }] }],
                 generationConfig: {
                     temperature: options.temperature || 0.7,
-                    maxOutputTokens: options.maxTokens || 2000
+                    maxOutputTokens: options.maxTokens || 8192  // Increased for Gemini 2.5 Flash with thinking
                 }
             });
 
-            const response = result.response.text();
-            console.log('Gemini API response received, length:', response.length);
-            return response;
+            // Debug the response structure
+            console.log('Full result object:', result);
+            console.log('Result.response:', result.response);
+            
+            if (result.response) {
+                const response = result.response.text();
+                console.log('Response text:', response);
+                console.log('Response text length:', response?.length || 0);
+                
+                // If empty, try other possible response structures
+                if (!response || response.length === 0) {
+                    console.log('Empty response, checking other structures...');
+                    console.log('result.response.candidates:', result.response.candidates);
+                    
+                    // Try to get text from candidates if available
+                    if (result.response.candidates && result.response.candidates[0]) {
+                        const candidate = result.response.candidates[0];
+                        console.log('First candidate:', candidate);
+                        console.log('Candidate content:', candidate.content);
+                        
+                        if (candidate.content && candidate.content.parts) {
+                            console.log('Content parts:', candidate.content.parts);
+                            const text = candidate.content.parts.map((part: any) => {
+                                console.log('Part:', part);
+                                return part.text || '';
+                            }).join('');
+                            console.log('Extracted text from candidates:', text);
+                            if (text) return text;
+                        }
+                    }
+                }
+                
+                return response || 'No response generated';
+            } else {
+                console.error('No response object in result');
+                return 'Error: No response from API';
+            }
         } catch (error: any) {
             console.error('Gemini API error:', error);
             
