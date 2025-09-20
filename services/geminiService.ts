@@ -181,10 +181,21 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
         // Try to parse the result as JSON
         const parsed = safeJsonParse(result);
         if (parsed && Array.isArray(parsed)) {
-            console.log('Generated scenes count:', parsed.length);
-            // Ensure we only return the requested number of scenes
+            console.log('🎬 Generated scenes count from AI:', parsed.length);
+            console.log('🎯 Requested scene count:', config.sceneCount);
+            
+            // STRICT ENFORCEMENT: Ensure we only return the requested number of scenes
             const limitedScenes = parsed.slice(0, config.sceneCount);
-            console.log('Returning scenes count:', limitedScenes.length);
+            console.log('✅ After limiting, returning scenes count:', limitedScenes.length);
+            
+            // Double-check the count before returning
+            if (limitedScenes.length > config.sceneCount) {
+                console.error('⚠️ WARNING: Still have more scenes than requested! Forcing limit.');
+                const forcedLimit = limitedScenes.slice(0, config.sceneCount);
+                console.log('✅ Final forced limit count:', forcedLimit.length);
+                return forcedLimit.map(p => ({ description: p.description }));
+            }
+            
             return limitedScenes.map(p => ({ description: p.description }));
         } else {
             // If not a direct array, try to extract from the response
@@ -192,9 +203,21 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
             if (jsonMatch) {
                 const extractedJson = safeJsonParse(jsonMatch[0]);
                 if (extractedJson && Array.isArray(extractedJson)) {
-                    console.log('Extracted scenes count:', extractedJson.length);
+                    console.log('🎬 Extracted scenes count from AI:', extractedJson.length);
+                    console.log('🎯 Requested scene count:', config.sceneCount);
+                    
+                    // STRICT ENFORCEMENT: Ensure we only return the requested number of scenes
                     const limitedScenes = extractedJson.slice(0, config.sceneCount);
-                    console.log('Returning scenes count:', limitedScenes.length);
+                    console.log('✅ After limiting, returning scenes count:', limitedScenes.length);
+                    
+                    // Double-check the count before returning
+                    if (limitedScenes.length > config.sceneCount) {
+                        console.error('⚠️ WARNING: Still have more scenes than requested! Forcing limit.');
+                        const forcedLimit = limitedScenes.slice(0, config.sceneCount);
+                        console.log('✅ Final forced limit count:', forcedLimit.length);
+                        return forcedLimit.map(p => ({ description: p.description }));
+                    }
+                    
                     return limitedScenes.map(p => ({ description: p.description }));
                 }
             }

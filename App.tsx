@@ -223,15 +223,28 @@ const App: React.FC = () => {
 
         try {
             const panels = await geminiService.generateStoryboard(idea, config);
-            const initialPanels: StoryboardPanel[] = panels.map(p => ({ ...p, isLoadingImage: true }));
+            
+            // STRICT SCENE COUNT ENFORCEMENT IN UI
+            console.log('🎬 Panels received from geminiService:', panels.length);
+            console.log('🎯 Scene count requested in config:', config.sceneCount);
+            
+            // Double-check and enforce the scene count limit
+            let limitedPanels = panels;
+            if (panels.length > config.sceneCount) {
+                console.warn(`⚠️ WARNING: Received ${panels.length} panels but requested ${config.sceneCount}. Forcing limit in UI.`);
+                limitedPanels = panels.slice(0, config.sceneCount);
+                console.log('✅ Limited to:', limitedPanels.length, 'panels');
+            }
+            
+            const initialPanels: StoryboardPanel[] = limitedPanels.map(p => ({ ...p, isLoadingImage: true }));
             setStoryboardPanels(initialPanels);
             setIsGeneratingStoryboard(false);
 
-            // Generate images sequentially
+            // Generate images sequentially (use limitedPanels instead of panels)
             let currentPanels = [...initialPanels];
-            for (let i = 0; i < panels.length; i++) {
+            for (let i = 0; i < limitedPanels.length; i++) {
                 try {
-                    const imageBase64 = await geminiService.generateImageForPanel(panels[i].description, config);
+                    const imageBase64 = await geminiService.generateImageForPanel(limitedPanels[i].description, config);
                     currentPanels[i] = { ...currentPanels[i], imageUrl: imageBase64, isLoadingImage: false };
                 } catch (imgErr: any) {
                     console.error(`Image generation failed for panel ${i}:`, imgErr);

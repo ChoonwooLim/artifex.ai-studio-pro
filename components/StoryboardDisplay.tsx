@@ -32,6 +32,14 @@ const StoryboardDisplay: React.FC<StoryboardDisplayProps> = ({
     isExportingPdf
 }) => {
     const { t } = useTranslation();
+    
+    // Debug log to track actual panels being rendered
+    React.useEffect(() => {
+        if (panels.length > 0) {
+            console.log('🖼️ StoryboardDisplay rendering panels count:', panels.length);
+            console.log('🖼️ Panel details:', panels.map((p, i) => `Scene ${i + 1}`));
+        }
+    }, [panels]);
 
     if (panels.length === 0 && !isGeneratingImages) {
         return null;
