@@ -162,6 +162,9 @@ const App: React.FC = () => {
 
     // Handlers for Description Mode
     const handleGenerateDescription = async () => {
+        console.log('handleGenerateDescription called with config:', descriptionConfig);
+        console.log('Selected model:', descriptionConfig.selectedModel);
+        
         setIsGeneratingDescription(true);
         setError(null);
         setDescription('');
@@ -176,9 +179,12 @@ const App: React.FC = () => {
                 
                 Please provide a compelling product description that highlights the key features and appeals to the target audience.`;
 
+            const modelToUse = descriptionConfig.selectedModel || 'gemini-2.5-flash';
+            console.log('Model to use for generation:', modelToUse);
+            
             const result = await aiService.generateText({
                 prompt,
-                model: descriptionConfig.selectedModel || 'gemini-2.5-flash',
+                model: modelToUse,
                 temperature: 0.7,
                 maxTokens: 1000
             });

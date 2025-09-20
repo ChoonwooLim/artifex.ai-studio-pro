@@ -38,10 +38,26 @@ class AIService {
     private googleGenAI: GoogleGenerativeAI | null = null;
 
     constructor() {
-        // Only initialize Google AI immediately as it's the default
-        const geminiKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google');
+        // Initialize Google AI
+        this.initializeGoogleAI();
+    }
+
+    private initializeGoogleAI() {
+        const envKey = import.meta.env.VITE_GOOGLE_API_KEY;
+        const storageKey = localStorage.getItem('apiKey_google');
+        const geminiKey = envKey || storageKey;
+        
+        console.log('Google AI initialization check:', {
+            hasEnvKey: !!envKey,
+            hasStorageKey: !!storageKey,
+            keyLength: geminiKey ? geminiKey.length : 0
+        });
+        
         if (geminiKey) {
+            console.log('Initializing Google AI with key');
             this.googleGenAI = new GoogleGenerativeAI(geminiKey);
+        } else {
+            console.log('No Google API key found during initialization');
         }
     }
 
@@ -88,6 +104,8 @@ class AIService {
 
     private getProviderForModel(model: string): string {
         const modelLower = model.toLowerCase();
+        
+        console.log('getProviderForModel called with:', model);
 
         // OpenAI models
         if (modelLower.includes('gpt') || modelLower.includes('dall-e') || modelLower.includes('o1')) {
@@ -109,8 +127,10 @@ class AIService {
             return 'mistral';
         }
         
-        // Google models
-        if (modelLower.includes('gemini') || modelLower.includes('palm')) {
+        // Google models - include version numbers
+        if (modelLower.includes('gemini') || modelLower.includes('palm') || 
+            modelLower.includes('2.5') || modelLower.includes('2.0') || 
+            modelLower.includes('1.5')) {
             return 'google';
         }
         
@@ -134,8 +154,15 @@ class AIService {
     }
 
     async generateText(options: GenerateTextOptions): Promise<string> {
+        console.log('generateText called with:', {
+            model: options.model,
+            promptLength: options.prompt.length,
+            temperature: options.temperature,
+            maxTokens: options.maxTokens
+        });
+        
         const provider = this.getProviderForModel(options.model);
-        console.log(`Using ${provider} provider for model ${options.model}`);
+        console.log(`Provider determined: ${provider} for model ${options.model}`);
 
         try {
             switch (provider) {
@@ -169,15 +196,19 @@ class AIService {
 
                 case 'google':
                 default:
+                    // Re-check and re-initialize if needed
+                    const currentKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google');
+                    
+                    if (!this.googleGenAI && currentKey) {
+                        console.log('Re-initializing Google AI with found key');
+                        this.googleGenAI = new GoogleGenerativeAI(currentKey);
+                    }
+                    
                     if (!this.googleGenAI) {
-                        // Re-check environment variable and localStorage in case key was added after service initialization
-                        const currentKey = import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('apiKey_google');
-                        if (currentKey) {
-                            this.googleGenAI = new GoogleGenerativeAI(currentKey);
-                            return await this.generateGeminiText(options);
-                        }
+                        console.error('Google AI not initialized - no API key found');
                         throw new Error('Google AI API key not configured. Please add your API key in settings.');
                     }
+                    
                     return await this.generateGeminiText(options);
             }
         } catch (error: any) {
@@ -187,32 +218,91 @@ class AIService {
     }
 
     private async generateGeminiText(options: GenerateTextOptions): Promise<string> {
+        console.log('generateGeminiText called with model:', options.model);
+        
         if (!this.googleGenAI) {
+            console.error('googleGenAI is null');
             throw new Error('Google AI API key not configured');
         }
 
-        // Map display names to actual API model names
+        // Map UI names to exact API model names (if different)
+        // These are the ACTUAL model names from Google's official API documentation
         const modelMap: { [key: string]: string } = {
-            'gemini-2-0-flash-exp': 'gemini-2.0-flash-exp',
-            'gemini-2-5-flash': 'gemini-2.5-flash',
-            'gemini-exp-1206': 'gemini-exp-1206',
+            // Stable models (confirmed from Google AI docs)
+            'gemini-2.5-pro': 'gemini-2.5-pro',
+            'gemini-2.5-flash': 'gemini-2.5-flash',  // This is the correct API name
+            'gemini-2.5-flash-lite': 'gemini-2.5-flash-lite',
+            'gemini-2.0-flash': 'gemini-2.0-flash',
+            'gemini-2.0-flash-lite': 'gemini-2.0-flash-lite',
             'gemini-1.5-pro': 'gemini-1.5-pro',
             'gemini-1.5-flash': 'gemini-1.5-flash',
+            // Experimental/Preview models
+            'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
+            'gemini-exp-1206': 'gemini-exp-1206',
             'gemini-pro': 'gemini-pro'
         };
 
+        // Get the actual API model name
         const actualModel = modelMap[options.model] || options.model;
-        const model = this.googleGenAI.getGenerativeModel({ model: actualModel });
-
-        const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: options.prompt }] }],
-            generationConfig: {
-                temperature: options.temperature || 0.7,
-                maxOutputTokens: options.maxTokens || 2000
-            }
+        
+        console.log('Gemini model resolution:', {
+            requested: options.model,
+            apiName: actualModel,
+            isMapped: options.model !== actualModel
         });
+        
+        try {
+            console.log(`Creating Gemini model with exact API name: ${actualModel}`);
+            const model = this.googleGenAI.getGenerativeModel({ model: actualModel });
 
-        return result.response.text();
+            console.log(`Sending request to Gemini API with model: ${actualModel}...`);
+            const result = await model.generateContent({
+                contents: [{ role: 'user', parts: [{ text: options.prompt }] }],
+                generationConfig: {
+                    temperature: options.temperature || 0.7,
+                    maxOutputTokens: options.maxTokens || 2000
+                }
+            });
+
+            const response = result.response.text();
+            console.log('Gemini API response received, length:', response.length);
+            return response;
+        } catch (error: any) {
+            console.error('Gemini API error:', error);
+            
+            // Log detailed error information
+            if (error.message) {
+                console.error('Error message:', error.message);
+            }
+            if (error.status) {
+                console.error('Error status:', error.status);
+            }
+            if (error.statusText) {
+                console.error('Error statusText:', error.statusText);
+            }
+            
+            // If it's an API key error
+            if (error.message?.includes('API_KEY') || error.message?.includes('401') || error.status === 401) {
+                throw new Error('Invalid or missing Google API key. Please check your API key in settings.');
+            }
+            
+            // If it's a model not found error - report exact issue
+            if (error.message?.includes('model') || error.message?.includes('404') || error.status === 404) {
+                if (options.model !== actualModel) {
+                    throw new Error(`The model "${options.model}" (API name: "${actualModel}") is not recognized by the Google Gemini API.`);
+                } else {
+                    throw new Error(`The model "${actualModel}" is not recognized by the Google Gemini API.`);
+                }
+            }
+            
+            // If it's a quota error
+            if (error.message?.includes('quota') || error.status === 429) {
+                throw new Error('API quota exceeded. Please try again later or check your Google Cloud quota.');
+            }
+            
+            // Re-throw other errors with full context
+            throw new Error(`Google AI API error: ${error.message || error.toString() || 'Unknown error occurred'}`);
+        }
     }
 
     async generateImage(options: GenerateImageOptions): Promise<string[]> {

@@ -35,7 +35,7 @@ const InputForm: React.FC<InputFormProps> = ({ config, setConfig, onGenerate, is
 
     const getProviderFromModel = (model: string): string => {
         const modelLower = model.toLowerCase();
-        if (modelLower.includes('gemini')) return 'google';
+        if (modelLower.includes('gemini') || modelLower.includes('2.5') || modelLower.includes('2.0')) return 'google';
         if (modelLower.includes('gpt') || modelLower.includes('o1') || modelLower.includes('o3') || modelLower.includes('o4')) return 'openai';
         if (modelLower.includes('claude') || modelLower.includes('opus') || modelLower.includes('sonnet')) return 'anthropic';
         if (modelLower.includes('mistral')) return 'mistral';
@@ -124,8 +124,11 @@ const InputForm: React.FC<InputFormProps> = ({ config, setConfig, onGenerate, is
                 </label>
                 <select
                     id="model"
-                    value={config.selectedModel || 'gemini-2.0-flash-exp'}
-                    onChange={(e) => handleConfigChange('selectedModel', e.target.value)}
+                    value={config.selectedModel || 'gemini-2.5-flash'}
+                    onChange={(e) => {
+                        console.log('Model selection changed to:', e.target.value);
+                        handleConfigChange('selectedModel', e.target.value);
+                    }}
                     className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                     {TEXT_MODEL_OPTIONS.map(model => {

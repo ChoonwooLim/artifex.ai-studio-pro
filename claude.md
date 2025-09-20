@@ -379,13 +379,24 @@ VITE_REPLICATE_API_KEY=...
 
 ## 📚 Error Prevention Guidelines
 
+### 🚨 매우 중요한 개발 지침 - AI 모델 처리
+**절대적 원칙: 모델 자동 대체/치환 금지**
+1. **절대로 모델을 임의로 대체하지 않는다** - 사용자가 선택한 정확한 모델을 그대로 사용
+2. **모델이 작동하지 않으면 그대로 보고한다** - "이 모델 대신 다른 모델을 사용합니다" 같은 자동 대체 금지
+3. **정확한 에러 상황을 그대로 전달한다** - 모델이 인식되지 않거나 지원되지 않으면 그 사실을 명확히 전달
+4. **사용자 경험 개선이라는 명목으로 자동 변환하지 않는다** - 모든 모델 관련 결정은 사용자의 명시적 선택을 따른다
+
+예시:
+- ❌ 잘못된 방식: "gemini-2.5-flash가 없어서 gemini-2.0-flash-exp로 대체합니다"
+- ✅ 올바른 방식: "gemini-2.5-flash 모델이 API에서 인식되지 않습니다"
+
 ### AI 서비스 개발시 주의사항
 1. **Always check the integration plan** before modifying AI services
 2. **Use established patterns** from the plan
 3. **Test with multiple models** before committing
 4. **Document any deviations** from the plan
 5. **Handle rate limits** gracefully
-6. **Implement fallback models** for reliability
+6. **Never implement automatic model substitution** - 절대 자동 모델 대체 금지
 
 ### 일반적인 오류와 해결법
 | 오류 | 원인 | 해결 방법 |
