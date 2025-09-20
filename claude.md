@@ -390,6 +390,28 @@ VITE_REPLICATE_API_KEY=...
 - ❌ 잘못된 방식: "gemini-2.5-flash가 없어서 gemini-2.0-flash-exp로 대체합니다"
 - ✅ 올바른 방식: "gemini-2.5-flash 모델이 API에서 인식되지 않습니다"
 
+### 🔥 문제 해결 원칙 - 절대 게으른 해결책 금지
+**2025년 9월 20일 Gemini 2.5 Flash 사건에서 배운 교훈**
+
+#### ❌ 절대 하지 말아야 할 것들:
+1. **대충 판단하고 쉬운 방법으로 우회하기**
+   - 잘못된 예: "모델이 안 되니까 다른 모델로 자동 대체하자"
+   - 올바른 예: 실제 원인(토큰 제한, API 응답 구조 등) 파악
+
+2. **근거 없는 추측으로 해결하기**
+   - 잘못된 예: "아마 2.5는 2.0의 마케팅 이름일 거야"
+   - 올바른 예: 공식 문서 확인, API 응답 디버깅
+
+3. **표면적 증상만 보고 빠른 해결책 찾기**
+   - 잘못된 예: "빈 응답이니까 모델이 없는 거야"
+   - 올바른 예: 응답 구조 분석, finishReason 확인, 토큰 제한 체크
+
+#### ✅ 올바른 문제 해결 절차:
+1. **정확한 로그 분석** - console.log로 전체 응답 구조 확인
+2. **공식 문서 검증** - 추측 대신 공식 문서에서 정확한 정보 확인
+3. **단계적 디버깅** - 문제의 근본 원인을 찾을 때까지 포기하지 않기
+4. **사용자 의도 존중** - 편의를 위한 자동 변경 절대 금지
+
 ### AI 서비스 개발시 주의사항
 1. **Always check the integration plan** before modifying AI services
 2. **Use established patterns** from the plan
@@ -397,6 +419,7 @@ VITE_REPLICATE_API_KEY=...
 4. **Document any deviations** from the plan
 5. **Handle rate limits** gracefully
 6. **Never implement automatic model substitution** - 절대 자동 모델 대체 금지
+7. **Debug thoroughly before proposing workarounds** - 우회책 제안 전 철저한 디버깅
 
 ### 일반적인 오류와 해결법
 | 오류 | 원인 | 해결 방법 |
@@ -405,6 +428,8 @@ VITE_REPLICATE_API_KEY=...
 | Rate Limit | 과도한 요청 | Retry 로직 추가 |
 | Model Not Found | 구버전 사용 | 최신 모델로 업데이트 |
 | Timeout | 네트워크 지연 | 타임아웃 증가 |
+| Empty Response (Gemini 2.5) | MAX_TOKENS 도달 | maxTokens를 8192 이상으로 증가 |
+| Thinking Mode Issues | 토큰 소비 과다 | Gemini 2.5의 thinking 기능 고려한 토큰 설정 |
 
 ---
 
