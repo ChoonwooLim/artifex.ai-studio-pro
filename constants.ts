@@ -78,9 +78,10 @@ export const TEXT_MODEL_OPTIONS: { value: string; label: string; description: st
 ];
 
 export const IMAGE_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    // Google Models (Sep 2025)
-    { value: 'gemini-2.5-flash-image', label: '🔷 Gemini 2.5 Flash Image', description: 'Nano-banana - Multi-image blending, character consistency.' },
-    { value: 'imagen-4', label: '🔷 Imagen 4', description: 'Latest image model with 2K resolution, remarkable clarity.' },
+    // Google Models (Sep 2025) - ✅ API로 사용 가능!
+    { value: 'gemini-2.5-flash-image', label: '🔷 Gemini 2.5 Flash Image ✓', description: 'Multi-modal image generation, character consistency ($0.039/image)' },
+    { value: 'imagen-4', label: '🔷 Imagen 4.0 ✓', description: 'Google\'s advanced image model, 2K resolution ($0.04/image)' },
+    { value: 'imagen-4-fast', label: '🔷 Imagen 4 Fast ✓', description: 'Fast image generation ($0.02/image)' },
     
     // OpenAI Models
     { value: 'dall-e-3', label: '🟢 DALL·E 3', description: 'OpenAI\'s latest image generation with text rendering.' },

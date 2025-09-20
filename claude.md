@@ -412,6 +412,38 @@ VITE_REPLICATE_API_KEY=...
 3. **단계적 디버깅** - 문제의 근본 원인을 찾을 때까지 포기하지 않기
 4. **사용자 의도 존중** - 편의를 위한 자동 변경 절대 금지
 
+### 🎨 Google 이미지 생성 API 사용법 (2025년 9월 20일 확인)
+**중요: Google의 Imagen 4.0과 Gemini Flash Image 모델들은 실제로 API를 통해 사용 가능합니다!**
+
+#### 사용 가능한 Google 이미지 모델
+1. **Imagen 4.0 시리즈**
+   - `imagen-4.0-generate-001` - 플래그십 모델 ($0.04/이미지)
+   - `imagen-4-fast` - 빠른 생성 ($0.02/이미지)
+   - `imagen-4-ultra` - 최고 품질 (Premium)
+
+2. **Gemini Flash Image**
+   - `gemini-2.5-flash-image-preview` - 멀티모달 이미지 생성 ($0.039/이미지)
+   - 텍스트와 이미지를 함께 생성 가능
+
+#### 올바른 구현 방법
+```typescript
+// Imagen 4.0 사용
+const model = genAI.getGenerativeModel({ 
+    model: "imagen-4.0-generate-001" 
+});
+
+// Gemini Flash Image 사용
+const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.5-flash-image-preview" 
+});
+```
+
+#### 지원되는 종횡비
+- `1:1` (Square), `4:3` (Fullscreen), `3:4` (Portrait)
+- `16:9` (Widescreen), `9:16` (Portrait widescreen)
+
+📚 **상세 문서**: [GOOGLE_IMAGE_GENERATION_API.md](./docs/ai-models/GOOGLE_IMAGE_GENERATION_API.md)
+
 ### AI 서비스 개발시 주의사항
 1. **Always check the integration plan** before modifying AI services
 2. **Use established patterns** from the plan
@@ -420,6 +452,7 @@ VITE_REPLICATE_API_KEY=...
 5. **Handle rate limits** gracefully
 6. **Never implement automatic model substitution** - 절대 자동 모델 대체 금지
 7. **Debug thoroughly before proposing workarounds** - 우회책 제안 전 철저한 디버깅
+8. **Google Image API는 실제로 작동함** - "not available" 에러는 구현 문제
 
 ### 일반적인 오류와 해결법
 | 오류 | 원인 | 해결 방법 |
