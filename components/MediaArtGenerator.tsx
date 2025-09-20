@@ -140,7 +140,7 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
     const { t } = useTranslation();
     const { sourceImage, style, styleParams, panels } = state;
     const [isExportingPdf, setIsExportingPdf] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
+    const [showSettings, setShowSettings] = useState(true);
 
     const handleStyleChange = (newStyle: MediaArtStyle) => {
         const styleOption = MEDIA_ART_STYLE_OPTIONS.find(opt => opt.value === newStyle);
@@ -455,7 +455,7 @@ const MediaArtGenerator: React.FC<MediaArtGeneratorProps> = ({
                                             onClick={() => onRegenerateVideo(index)}
                                             title={t('mediaArt.generateTransition')}
                                             className="p-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors disabled:opacity-50 flex items-center gap-2 text-xs px-3"
-                                            disabled={panel.isLoadingVideo || !panel.imageUrl || panel.imageUrl === 'error' || panel.imageUrl === 'quota_error'}
+                                            disabled={panel.isLoadingVideo || !panel.imageUrl || panel.imageUrl === 'error' || panel.imageUrl === 'quota_error' || !panel.endImageUrl || panel.endImageUrl === 'error' || panel.endImageUrl === 'quota_error'}
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
                                             <span className="hidden sm:inline">{t('mediaArt.generateTransition')}</span>

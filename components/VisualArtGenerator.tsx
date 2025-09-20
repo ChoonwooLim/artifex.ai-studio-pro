@@ -15,7 +15,7 @@ interface VisualArtGeneratorProps {
 const VisualArtGenerator: React.FC<VisualArtGeneratorProps> = ({ state, setState, onGenerate }) => {
     const { t } = useTranslation();
     const { inputText, config, resultVideoUrl, isLoading, error, sourceImage } = state;
-    const [showSettings, setShowSettings] = useState(false);
+    const [showSettings, setShowSettings] = useState(true);
 
     const handleConfigChange = (newConfig: VisualArtConfig) => {
         setState(s => ({ ...s, config: newConfig }));

@@ -15,7 +15,7 @@ interface StoryboardInputFormProps {
 const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, isLoading, config, setConfig, onShowSampleGallery }) => {
     const { t } = useTranslation();
     const [idea, setIdea] = useState('');
-    const [showSettings, setShowSettings] = useState(false);
+    const [showSettings, setShowSettings] = useState(true);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
