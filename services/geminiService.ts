@@ -143,6 +143,7 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
     console.log('Scene count requested:', config.sceneCount);
     console.log('AspectRatio value:', config.aspectRatio);
     console.log('AspectRatio type:', typeof config.aspectRatio);
+    console.log('Text model:', config.textModel);
     
     const prompt = `Create a storyboard for a short video based on this idea: "${idea}".
 
@@ -156,65 +157,56 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
     7.  IMPORTANT: Use simple scene numbers like "1", "2", "3" etc. Do not use scientific notation or decimal numbers.
     8.  CRITICAL: You must return EXACTLY ${config.sceneCount} scenes, not more, not less.
     
-    Return the result as a JSON array of EXACTLY ${config.sceneCount} objects with sceneNumber and description fields.`;
+    Return the result as a JSON array of EXACTLY ${config.sceneCount} objects with sceneNumber and description fields.
+    Format the output as a simple JSON array like this:
+    [
+        {"sceneNumber": "1", "description": "..."},
+        {"sceneNumber": "2", "description": "..."}
+    ]`;
 
     try {
-        // Try with structured output first
-        const model = getGenAI().getGenerativeModel({ 
-            model: config.textModel,
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: SchemaType.ARRAY,
-                    items: storyboardPanelSchema,
-                },
+        // Use aiService to route to the correct provider based on model
+        const textModel = config.textModel || 'gemini-2.5-flash';
+        console.log('Using text model:', textModel);
+        
+        const result = await aiService.generateText({
+            prompt,
+            model: textModel,
+            temperature: 0.7,
+            maxTokens: 8192
+        });
+        
+        console.log('Raw AI response:', result.substring(0, 200) + '...');
+        
+        // Try to parse the result as JSON
+        const parsed = safeJsonParse(result);
+        if (parsed && Array.isArray(parsed)) {
+            console.log('Generated scenes count:', parsed.length);
+            // Ensure we only return the requested number of scenes
+            const limitedScenes = parsed.slice(0, config.sceneCount);
+            console.log('Returning scenes count:', limitedScenes.length);
+            return limitedScenes.map(p => ({ description: p.description }));
+        } else {
+            // If not a direct array, try to extract from the response
+            const jsonMatch = result.match(/\[\s*{[^\]]*}\s*\]/s);
+            if (jsonMatch) {
+                const extractedJson = safeJsonParse(jsonMatch[0]);
+                if (extractedJson && Array.isArray(extractedJson)) {
+                    console.log('Extracted scenes count:', extractedJson.length);
+                    const limitedScenes = extractedJson.slice(0, config.sceneCount);
+                    console.log('Returning scenes count:', limitedScenes.length);
+                    return limitedScenes.map(p => ({ description: p.description }));
+                }
             }
-        });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        
-        const parsed = safeJsonParse(response.text());
-        if (parsed && Array.isArray(parsed)) {
-            console.log('Generated scenes count:', parsed.length);
-            // Ensure we only return the requested number of scenes
-            const limitedScenes = parsed.slice(0, config.sceneCount);
-            console.log('Returning scenes count:', limitedScenes.length);
-            return limitedScenes.map(p => ({ description: p.description }));
         }
+        
+        // If we couldn't parse as JSON, throw error
+        throw new Error('Could not parse storyboard response as JSON');
+        
     } catch (error) {
-        console.error("Structured output failed, trying fallback:", error);
+        console.error("Failed to generate storyboard:", error);
+        throw new Error(`Failed to generate storyboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    // Fallback: Try without structured output
-    try {
-        const fallbackPrompt = prompt + `
-        
-        Format the output as a simple JSON array like this:
-        [
-            {"sceneNumber": "1", "description": "..."},
-            {"sceneNumber": "2", "description": "..."}
-        ]`;
-        
-        const fallbackModel = getGenAI().getGenerativeModel({ 
-            model: config.textModel
-        });
-        
-        const result = await fallbackModel.generateContent(fallbackPrompt);
-        const response = await result.response;
-        
-        const parsed = safeJsonParse(response.text());
-        if (parsed && Array.isArray(parsed)) {
-            console.log('Generated scenes count:', parsed.length);
-            // Ensure we only return the requested number of scenes
-            const limitedScenes = parsed.slice(0, config.sceneCount);
-            console.log('Returning scenes count:', limitedScenes.length);
-            return limitedScenes.map(p => ({ description: p.description }));
-        }
-    } catch (fallbackError) {
-        console.error("Fallback also failed:", fallbackError);
-    }
-    
-    throw new Error("Failed to generate a valid storyboard structure after multiple attempts.");
 };
 
 export const generateDetailedStoryboard = async (originalScene: string, language: string): Promise<{ description: string }[]> => {

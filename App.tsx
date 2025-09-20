@@ -89,7 +89,7 @@ const App: React.FC = () => {
         mood: Mood.EPIC,
         descriptionLanguage: 'English',
         textModel: 'gemini-2.5-flash',
-        imageModel: 'gemini-2.5-flash-image',
+        imageModel: 'dall-e-3',  // Changed from imagen-4 to dall-e-3 (available via OpenAI API)
         videoModel: 'veo-3',
     };
     const [storyboardConfig, setStoryboardConfig] = useState<StoryboardConfig>(initialStoryboardConfig);
@@ -150,6 +150,15 @@ const App: React.FC = () => {
     // Generic loading/error for now
     const [error, setError] = useState<string | null>(null);
     
+    // Check environment variables on mount
+    React.useEffect(() => {
+        console.log('App mounted - Checking environment variables...');
+        console.log('VITE_OPENAI_API_KEY exists:', !!import.meta.env.VITE_OPENAI_API_KEY);
+        console.log('VITE_GOOGLE_API_KEY exists:', !!import.meta.env.VITE_GOOGLE_API_KEY);
+        console.log('VITE_ANTHROPIC_API_KEY exists:', !!import.meta.env.VITE_ANTHROPIC_API_KEY);
+        console.log('All VITE_ env vars:', Object.keys(import.meta.env).filter(k => k.startsWith('VITE_')));
+    }, []);
+
     const getSampleProducts = useCallback(() => {
         const langCode = language === 'Korean' ? 'ko' : 'en';
         return Object.values(sampleProductsData).map(p => p[langCode]);
@@ -202,6 +211,9 @@ const App: React.FC = () => {
         console.log('handleGenerateStoryboard called with config:', config);
         console.log('Config aspectRatio:', config.aspectRatio, 'type:', typeof config.aspectRatio);
         console.log('Config imageModel:', config.imageModel);
+        console.log('Config textModel:', config.textModel);
+        console.log('Config videoModel:', config.videoModel);
+        console.log('Config language:', config.descriptionLanguage);
         setStoryIdea(idea);
         setStoryboardConfig(config);
         setIsGeneratingStoryboard(true);
@@ -329,15 +341,31 @@ const App: React.FC = () => {
     };
     
     const handleSelectSampleStory = (story: SampleStory) => {
+        console.log('handleSelectSampleStory - Current user settings:', {
+            aspectRatio: storyboardConfig.aspectRatio,
+            textModel: storyboardConfig.textModel,
+            imageModel: storyboardConfig.imageModel,
+            videoModel: storyboardConfig.videoModel,
+            descriptionLanguage: storyboardConfig.descriptionLanguage
+        });
+        console.log('Sample story config:', story.config);
+        
         setStoryIdea(story.idea);
-        // Preserve user's aspectRatio selection when loading sample story
-        const configWithUserAspectRatio = {
+        // Preserve user's selected settings when loading sample story
+        const configWithUserSettings = {
             ...story.config,
-            aspectRatio: storyboardConfig.aspectRatio  // Keep user's aspectRatio
+            aspectRatio: storyboardConfig.aspectRatio,      // Keep user's aspectRatio
+            textModel: storyboardConfig.textModel,          // Keep user's text model
+            imageModel: storyboardConfig.imageModel,        // Keep user's image model
+            videoModel: storyboardConfig.videoModel,        // Keep user's video model
+            descriptionLanguage: storyboardConfig.descriptionLanguage  // Keep user's language
         };
-        setStoryboardConfig(configWithUserAspectRatio);
+        
+        console.log('Final merged config:', configWithUserSettings);
+        
+        setStoryboardConfig(configWithUserSettings);
         setIsSampleGalleryOpen(false);
-        handleGenerateStoryboard(story.idea, configWithUserAspectRatio);
+        handleGenerateStoryboard(story.idea, configWithUserSettings);
     };
 
     // Project Management (DB)

@@ -21,11 +21,17 @@ export class OpenAIService {
     constructor() {
         // Check environment variable first, then localStorage
         const apiKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('apiKey_openai');
+        console.log('OpenAIService constructor - API key found:', apiKey ? `Yes (length: ${apiKey.length})` : 'No');
+        console.log('Environment keys available:', Object.keys(import.meta.env).filter(k => k.startsWith('VITE_')));
+        
         if (apiKey) {
             this.client = new OpenAI({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true
             });
+            console.log('OpenAI client initialized successfully');
+        } else {
+            console.warn('OpenAI API key not found in environment or localStorage');
         }
     }
 
@@ -87,9 +93,13 @@ export class OpenAIService {
     }
 
     async generateImage(options: ImageGenerateOptions): Promise<string[]> {
+        console.log('OpenAIService.generateImage called with options:', options);
+        
         if (!this.client) {
             // Re-check environment variable and localStorage in case key was added after service initialization
             const currentKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('apiKey_openai');
+            console.log('OpenAI API key check in generateImage:', currentKey ? 'Found' : 'Not found');
+            
             if (currentKey) {
                 this.client = new OpenAI({
                     apiKey: currentKey,
@@ -111,6 +121,7 @@ export class OpenAIService {
             };
 
             const actualModel = modelMap[options.model] || 'dall-e-3';
+            console.log('Using actual model:', actualModel);
 
             const response = await this.client.images.generate({
                 model: actualModel,
@@ -134,6 +145,8 @@ export class OpenAIService {
     }
 
     private mapImageSize(width?: number, height?: number, model?: string): '256x256' | '512x512' | '1024x1024' | '1792x1024' | '1024x1792' {
+        console.log('mapImageSize called with:', { width, height, model });
+        
         if (model === 'dall-e-2') {
             if (width && width <= 256) return '256x256';
             if (width && width <= 512) return '512x512';
@@ -142,9 +155,17 @@ export class OpenAIService {
         
         if (width && height) {
             const aspectRatio = width / height;
-            if (aspectRatio > 1.5) return '1792x1024';
-            if (aspectRatio < 0.67) return '1024x1792';
+            console.log('Aspect ratio:', aspectRatio);
+            if (aspectRatio > 1.5) {
+                console.log('Returning landscape: 1792x1024');
+                return '1792x1024';
+            }
+            if (aspectRatio < 0.67) {
+                console.log('Returning portrait: 1024x1792');
+                return '1024x1792';
+            }
         }
+        console.log('Returning square: 1024x1024');
         return '1024x1024';
     }
 }
