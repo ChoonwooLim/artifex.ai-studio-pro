@@ -18,6 +18,7 @@ const GalleryModal = lazy(() => import('./components/GalleryModal'));
 const MediaArtGenerator = lazy(() => import('./components/MediaArtGenerator'));
 const ImageSelectionModal = lazy(() => import('./components/ImageSelectionModal'));
 const VisualArtGenerator = lazy(() => import('./components/VisualArtGenerator'));
+const ApiKeyManager = lazy(() => import('./components/ApiKeyManager'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -144,6 +145,7 @@ const App: React.FC = () => {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+    const [isApiManagerOpen, setIsApiManagerOpen] = useState(false);
     
     // Generic loading/error for now
     const [error, setError] = useState<string | null>(null);
@@ -650,6 +652,7 @@ const App: React.FC = () => {
                         onNewProject={handleNewProject} 
                         onImport={handleImportProject} 
                         onExportProject={handleExportProject}
+                        onOpenApiManager={() => setIsApiManagerOpen(true)}
                     />
                     <div className="mt-12">
                         <ModeSwitcher mode={mode} setMode={setMode} />
@@ -768,6 +771,10 @@ const App: React.FC = () => {
                         setMediaArtState(s => ({...s, sourceImage: source, panels: []}));
                         setIsImageSelectorOpen(false);
                     }}
+                />
+                <ApiKeyManager
+                    isOpen={isApiManagerOpen}
+                    onClose={() => setIsApiManagerOpen(false)}
                 />
             </Suspense>
         </>

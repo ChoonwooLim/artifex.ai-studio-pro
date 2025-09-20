@@ -36,8 +36,8 @@ const InputForm: React.FC<InputFormProps> = ({ config, setConfig, onGenerate, is
     const getProviderFromModel = (model: string): string => {
         const modelLower = model.toLowerCase();
         if (modelLower.includes('gemini')) return 'google';
-        if (modelLower.includes('gpt') || modelLower.includes('o1')) return 'openai';
-        if (modelLower.includes('claude')) return 'anthropic';
+        if (modelLower.includes('gpt') || modelLower.includes('o1') || modelLower.includes('o3') || modelLower.includes('o4')) return 'openai';
+        if (modelLower.includes('claude') || modelLower.includes('opus') || modelLower.includes('sonnet')) return 'anthropic';
         if (modelLower.includes('mistral')) return 'mistral';
         return 'google';
     };
@@ -135,10 +135,9 @@ const InputForm: React.FC<InputFormProps> = ({ config, setConfig, onGenerate, is
                             <option 
                                 key={model.value} 
                                 value={model.value} 
-                                disabled={!available}
-                                className={`bg-slate-800 ${!available ? 'text-slate-500' : ''}`}
+                                className={`bg-slate-800 ${!available ? 'text-slate-400' : 'text-white'}`}
                             >
-                                {model.label} {!available && `(${provider} API key required)`}
+                                {model.label} {!available && `(⚠️ ${provider} API key required)`}
                             </option>
                         );
                     })}

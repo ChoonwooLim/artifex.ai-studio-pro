@@ -237,13 +237,63 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isOpen, onClose }) => {
     const handleSave = () => {
         // Save API keys to localStorage
         Object.entries(apiKeys).forEach(([serviceKey, apiKey]) => {
-            if (apiKey) {
+            if (apiKey && !envKeys[serviceKey]) { // Only save if not from env
                 localStorage.setItem(`apiKey_${serviceKey}`, apiKey);
-            } else {
+            } else if (!apiKey) {
                 localStorage.removeItem(`apiKey_${serviceKey}`);
             }
         });
         onClose();
+        // Reload the page to pick up new API keys
+        window.location.reload();
+    };
+
+    const handleExportEnv = () => {
+        // Create .env.local content
+        let envContent = '# API Keys Configuration\n';
+        envContent += '# Generated from Artifex.AI Studio Pro\n';
+        envContent += '# ' + new Date().toISOString() + '\n\n';
+        
+        const envVarNames: Record<string, string> = {
+            'openai': 'VITE_OPENAI_API_KEY',
+            'anthropic': 'VITE_ANTHROPIC_API_KEY',
+            'google': 'VITE_GOOGLE_API_KEY',
+            'xai': 'VITE_XAI_API_KEY',
+            'replicate': 'VITE_REPLICATE_API_KEY',
+            'stability': 'VITE_STABILITY_API_KEY',
+            'midjourney': 'VITE_MIDJOURNEY_API_KEY',
+            'runway': 'VITE_RUNWAY_API_KEY',
+            'pika': 'VITE_PIKA_API_KEY',
+            'luma': 'VITE_LUMA_API_KEY',
+            'adobe': 'VITE_ADOBE_API_KEY',
+            'meta': 'VITE_META_API_KEY',
+            'mistral': 'VITE_MISTRAL_API_KEY',
+            'flux': 'VITE_FLUX_API_KEY',
+            'cohere': 'VITE_COHERE_API_KEY',
+            'huggingface': 'VITE_HUGGINGFACE_API_KEY',
+            'ideogram': 'VITE_IDEOGRAM_API_KEY',
+            'leonardo': 'VITE_LEONARDO_API_KEY'
+        };
+        
+        Object.entries(apiKeys).forEach(([serviceKey, apiKey]) => {
+            if (apiKey && !apiKey.includes('••••')) { // Don't export masked keys
+                const envVarName = envVarNames[serviceKey];
+                if (envVarName) {
+                    envContent += `${envVarName}=${apiKey}\n`;
+                }
+            }
+        });
+        
+        // Create and download file
+        const blob = new Blob([envContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '.env.local';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
 
     const toggleShowKey = (serviceKey: string) => {
@@ -358,9 +408,23 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isOpen, onClose }) => {
 
                 <div className="border-t border-slate-700 p-6">
                     <div className="flex justify-between items-center">
-                        <p className="text-sm text-slate-400">
-                            {t('apiKeys.securityNote')}
-                        </p>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleExportEnv}
+                                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                                title="Export API keys to .env.local file"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Export .env.local
+                            </button>
+                            <p className="text-sm text-slate-400">
+                                {envKeys && Object.keys(envKeys).some(k => envKeys[k]) 
+                                    ? '✓ Some keys loaded from .env.local'
+                                    : 'Keys stored in browser'}
+                            </p>
+                        </div>
                         <div className="flex gap-3">
                             <button
                                 onClick={onClose}

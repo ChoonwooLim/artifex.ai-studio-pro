@@ -5,15 +5,17 @@ import UploadIcon from './icons/UploadIcon';
 import PlusIcon from './icons/PlusIcon';
 import GalleryIcon from './icons/GalleryIcon';
 import SaveIcon from './icons/SaveIcon';
+import ApiKeyIcon from './icons/ApiKeyIcon';
 
 interface HeaderProps {
     onOpenGallery: () => void;
     onNewProject: () => void;
     onImport: () => void;
     onExportProject: () => void;
+    onOpenApiManager: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenGallery, onNewProject, onImport, onExportProject }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenGallery, onNewProject, onImport, onExportProject, onOpenApiManager }) => {
     const { t, language, setLanguage } = useTranslation();
     const title = t('header.title');
     const subtitle = t('header.subtitle');
@@ -68,6 +70,15 @@ const Header: React.FC<HeaderProps> = ({ onOpenGallery, onNewProject, onImport, 
                     >
                         <GalleryIcon className="w-4 h-4 flex-shrink-0" />
                         <span className="hidden sm:inline">{t('header.openGallery')}</span>
+                    </button>
+                    <div className="h-6 w-px bg-slate-600"></div>
+                    <button 
+                        onClick={onOpenApiManager}
+                        className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 text-white border border-blue-500/50 font-medium py-2 px-3 sm:px-4 rounded-lg transition-all flex items-center gap-2"
+                        title={t('tooltips.manageApiKeys')}
+                    >
+                        <ApiKeyIcon className="w-4 h-4 flex-shrink-0" />
+                        <span className="hidden sm:inline">API Keys</span>
                     </button>
                 </div>
             </div>

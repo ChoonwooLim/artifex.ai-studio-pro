@@ -177,9 +177,7 @@ ${this.errors.length > 0 ? `- Issues found: ${this.errors.length}` : '- No issue
 }
 
 // Run verification
-if (require.main === module) {
-    const verifier = new ModelVerifier();
-    verifier.run().catch(console.error);
-}
+const verifier = new ModelVerifier();
+verifier.run().catch(console.error);
 
 export { ModelVerifier };
