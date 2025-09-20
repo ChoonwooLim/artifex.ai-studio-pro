@@ -57,33 +57,30 @@ export const DESCRIPTION_LANGUAGE_OPTIONS: { value: string; label: string }[] = 
 ];
 
 export const TEXT_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    // Google Models
-    { value: 'gemini-2.5-flash', label: '🔷 Gemini 2.5 Flash', description: 'Fast, multimodal, and cost-effective for most tasks.' },
-    { value: 'gemini-2.0-flash-exp', label: '🔷 Gemini 2.0 Flash Exp', description: 'Experimental version with enhanced capabilities.' },
-    { value: 'gemini-1.5-pro', label: '🔷 Gemini 1.5 Pro', description: 'Advanced reasoning and long-context understanding.' },
+    // Google Models (Sep 2025)
+    { value: 'gemini-2.5-flash', label: '🔷 Gemini 2.5 Flash', description: 'Stable thinking model for fast, high-volume tasks (Released June 2025).' },
+    { value: 'gemini-2.5-pro', label: '🔷 Gemini 2.5 Pro', description: 'Most advanced Gemini with adaptive thinking (Released 2025).' },
+    { value: 'gemini-2.5-flash-lite', label: '🔷 Gemini 2.5 Flash-Lite', description: 'Cost-efficient, fastest 2.5 model (Preview).' },
+    { value: 'gemini-2.0-flash', label: '🔷 Gemini 2.0 Flash', description: 'Superior speed with 1M token context window.' },
     
-    // OpenAI Models (As of Sept 2025)
-    { value: 'gpt-5', label: '🟢 GPT-5', description: 'Released Aug 7, 2025 - State-of-the-art in coding, math (94.6% AIME), and reasoning.' },
-    { value: 'gpt-5-mini', label: '🟢 GPT-5 Mini', description: 'Smaller, faster GPT-5 variant with excellent performance.' },
-    { value: 'gpt-5-nano', label: '🟢 GPT-5 Nano', description: 'Most efficient GPT-5 variant for simple tasks.' },
-    { value: 'o4-mini', label: '🟢 o4-mini', description: 'Released Apr 2025 - Successor to o3-mini with multimodal input.' },
-    { value: 'o3', label: '🟢 o3', description: 'Released Jan 2025 - Advanced reasoning with adjustable effort levels.' },
-    { value: 'o3-mini', label: '🟢 o3-mini', description: 'Released Jan 31, 2025 - Efficient reasoning model.' },
-    { value: 'gpt-4o', label: '🟢 GPT-4o', description: 'Optimized GPT-4 with vision capabilities.' },
-    { value: 'gpt-4o-mini', label: '🟢 GPT-4o Mini', description: 'Lightweight version of GPT-4o.' },
+    // OpenAI Models (Sep 2025)
+    { value: 'gpt-5', label: '🟢 GPT-5', description: 'Latest flagship - Best for coding (74.9% SWE-bench), math, and reasoning.' },
+    { value: 'gpt-5-mini', label: '🟢 GPT-5 Mini', description: 'Balanced performance GPT-5 variant.' },
+    { value: 'gpt-5-nano', label: '🟢 GPT-5 Nano', description: 'Most efficient GPT-5 for simple tasks.' },
+    { value: 'gpt-4.1', label: '🟢 GPT-4.1', description: 'Released 2025 - 1M context, superior coding and instruction following.' },
+    { value: 'gpt-4.1-mini', label: '🟢 GPT-4.1 Mini', description: 'Efficient GPT-4.1 variant.' },
+    { value: 'o4-mini', label: '🟢 o4-mini', description: 'Fast reasoning model, best on AIME 2024/2025.' },
+    { value: 'gpt-realtime', label: '🟢 GPT-Realtime', description: 'Speech-to-speech model for voice interactions.' },
     
-    // Anthropic Models (As of Sept 2025)  
-    { value: 'claude-opus-4.1', label: '🔴 Claude Opus 4.1', description: 'Released Aug 5, 2025 - Best coding (74.5% SWE-bench), agentic tasks.' },
-    { value: 'claude-opus-4', label: '🔴 Claude Opus 4', description: 'Released May 22, 2025 - World\'s best coding model (72.5% SWE-bench).' },
-    { value: 'claude-sonnet-4', label: '🔴 Claude Sonnet 4', description: 'Released May 22, 2025 - Superior coding and reasoning, precise instructions.' },
-    { value: 'claude-3.7-sonnet', label: '🔴 Claude 3.7 Sonnet', description: 'Released Feb 24, 2025 - Hybrid reasoning with thinking modes.' },
-    { value: 'claude-3.5-sonnet', label: '🔴 Claude 3.5 Sonnet', description: 'Updated version with computer use capabilities.' },
-    { value: 'claude-3.5-haiku', label: '🔴 Claude 3.5 Haiku', description: 'Fast and cost-effective for simple tasks.' },
+    // Anthropic Models (Sep 2025)  
+    { value: 'claude-opus-4-1-20250805', label: '🔴 Claude Opus 4.1', description: 'Aug 5, 2025 - Best coding (72.5% SWE-bench), long tasks.' },
+    { value: 'claude-sonnet-4', label: '🔴 Claude Sonnet 4', description: 'May 22, 2025 - Fast with 1M context (beta), hybrid reasoning.' },
 ];
 
 export const IMAGE_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    // Google Models
-    { value: 'imagen-4.0-generate-001', label: '🔷 Imagen 4.0', description: 'Google\'s most advanced image generation model.' },
+    // Google Models (Sep 2025)
+    { value: 'imagen-4', label: '🔷 Imagen 4', description: 'Latest image model with 2K resolution, remarkable clarity.' },
+    { value: 'gemini-2.5-flash-image', label: '🔷 Gemini 2.5 Flash Image', description: 'Nano-banana - Multi-image blending, character consistency.' },
     
     // OpenAI Models
     { value: 'dall-e-3', label: '🟢 DALL·E 3', description: 'OpenAI\'s latest image generation with text rendering.' },
@@ -101,9 +98,9 @@ export const IMAGE_MODEL_OPTIONS: { value: string; label: string; description: s
 ];
 
 export const VIDEO_MODEL_OPTIONS: { value: string; label: string; description: string }[] = [
-    // Google Models
-    { value: 'veo-2.0-generate-001', label: '🔷 Veo 2.0', description: 'Google\'s advanced video model.' },
-    { value: 'veo-3.0', label: '🔷 Veo 3.0', description: 'Latest Veo with audio support and 4K.' },
+    // Google Models (Sep 2025)
+    { value: 'veo-3', label: '🔷 Veo 3', description: 'Sep 2025 - Native audio generation, lip sync, 4K video.' },
+    { value: 'veo-2', label: '🔷 Veo 2', description: 'Dec 2024 - 4K video, enhanced physics simulation.' },
     
     // OpenAI Models
     { value: 'sora-turbo', label: '🟢 Sora Turbo', description: 'OpenAI\'s video generation (ChatGPT Plus/Pro only).' },

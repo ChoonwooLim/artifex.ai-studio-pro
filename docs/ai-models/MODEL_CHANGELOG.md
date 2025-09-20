@@ -5,38 +5,54 @@
 
 ---
 
-## 2025년 9월 20일 (최신 확인)
+## 2025년 9월 20일 오후 (실제 최신 확인 - WebSearch 검증)
 
-### 🔥 중요: 실제 출시된 최신 모델 정보 업데이트
+### 🎯 실제 출시된 최신 모델 정보 (2025년 9월 20일 기준)
 
-#### OpenAI (2025년 9월 기준)
-- **GPT-5 시리즈** (2025년 8월 7일 정식 출시)
-  - GPT-5: 플래그십 모델 - AIME 94.6%, SWE-bench 74.9%
-  - GPT-5-mini: 중간 성능 모델
-  - GPT-5-nano: 경량 모델
-- **o3/o4 시리즈** 
-  - o4-mini: 2025년 4월 16일 출시 (o3-mini 후속)
-  - o3: 2025년 1월 31일 출시
-  - o3-mini: 2025년 1월 31일 출시
-  - o3-pro: 2025년 6월 10일 출시
-- **GPT-4 시리즈** (여전히 사용 가능)
-  - GPT-4o, GPT-4o-mini
+#### Google (2025년 9월 20일 확인)
+##### Text Models
+- **Gemini 2.5 시리즈** (Thinking Models)
+  - **Gemini 2.5 Pro** (Stable): 가장 진보된 모델, 적응형 thinking
+  - **Gemini 2.5 Flash** (Stable, 2025년 6월 GA): 빠른 성능, 대규모 처리 최적화
+  - **Gemini 2.5 Flash-Lite** (Preview): 가장 비용 효율적이고 빠른 2.5 모델
+  - **Gemini 2.5 Deep Think** (Limited Access): Ultra 구독자 대상 고급 추론
+- **Gemini 2.0 Flash**: 1M 토큰 컨텍스트 윈도우
+- **Gemini 2.5 Flash Live**: 음성/비디오 실시간 처리
 
-#### Anthropic (2025년 9월 기준)  
-- **Claude Opus 4.1**: 2025년 8월 5일 출시 (최신)
-  - SWE-bench 74.5% 달성
-  - 에이전트 작업 최적화
-- **Claude 4 시리즈**: 2025년 5월 22일 출시
-  - Claude Opus 4: SWE-bench 72.5%
-  - Claude Sonnet 4: 균형잡힌 성능
-- **Claude 3.7 Sonnet**: 2025년 2월 24일 출시
-  - 하이브리드 추론 모델
-- **Claude 3.5 시리즈**: 여전히 사용 가능
+##### Image Models  
+- **Imagen 4** (Public Preview on Vertex AI): 2K 해상도, 뛰어난 선명도
+- **Gemini 2.5 Flash Image** (nano-banana, 2025년 8월 26일): 다중 이미지 블렌딩, 캐릭터 일관성
 
-#### Google (2025년 9월 기준)
-- Gemini 2.5 Flash
-- Gemini 2.0 Flash Exp
-- Gemini 1.5 Pro
+##### Video Models
+- **Veo 3** (Private Preview, 2025년 9월): 네이티브 오디오 생성, 립싱크, 4K
+- **Veo 2** (2024년 12월): 4K 비디오, 향상된 물리 시뮬레이션
+
+#### OpenAI (2025년 9월 20일 확인)
+##### Text Models
+- **GPT-5 시리즈** (최신 메이저 릴리즈)
+  - **GPT-5**: SWE-bench 74.9%, AIME 94.6%, 코딩/에이전트 작업 최고
+  - **GPT-5-mini**: 균형잡힌 성능
+  - **GPT-5-nano**: 간단한 작업용 효율적 모델
+- **GPT-4.1 시리즈** (API 전용)
+  - **GPT-4.1**: 1M 토큰 컨텍스트, 향상된 코딩 및 지시 따르기
+  - **GPT-4.1 mini**, **GPT-4.1 nano**
+- **특수 모델**
+  - **gpt-realtime** (GA): 음성-음성 변환 모델
+  - **GPT-5-Codex**: 코딩 특화
+  - **OpenAI o4-mini**: 빠른 추론, AIME 2024/2025 최고 성능
+
+##### Image Models
+- **DALL-E 3** (현재 버전)
+
+#### Anthropic (2025년 9월 20일 확인)
+- **Claude Opus 4.1** (2025년 8월 5일): 
+  - API ID: `claude-opus-4-1-20250805`
+  - SWE-bench 72.5%, Terminal-bench 43.2%
+  - 가격: $15/$75 per million tokens
+- **Claude Sonnet 4** (2025년 5월 22일):
+  - 1M 토큰 컨텍스트 (베타)
+  - 가격: $3/$15 (기본), $6/$22.50 (200K+ 토큰)
+- **레거시**: Claude 3.x 시리즈는 deprecation 중 (2026년 1월 5일 완전 종료 예정)
 
 ### 🛠️ 자동 확인 스크립트 개선 필요
 - 공식 사이트 직접 확인 메커니즘 추가 필요

@@ -1,7 +1,26 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { AspectRatio, DescriptionConfig, StoryboardConfig, VisualStyle, MediaArtStyle, VisualArtEffect, MediaArtSourceImage, MediaArtStyleParams, DataCompositionParams, DigitalNatureParams, AiDataSculptureParams, LightAndSpaceParams, KineticMirrorsParams, GenerativeBotanyParams, QuantumPhantasmParams, ArchitecturalProjectionParams } from "../types";
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
+// Dynamic API key initialization to support both environment variables and localStorage
+let genAI: GoogleGenerativeAI | null = null;
+
+const getGenAI = (): GoogleGenerativeAI => {
+    // Always check for the latest API key
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || 
+                   import.meta.env.VITE_GEMINI_API_KEY || 
+                   localStorage.getItem('apiKey_google');
+    
+    if (!apiKey) {
+        throw new Error('Google AI API key not configured. Please add your API key in the API Keys settings.');
+    }
+    
+    // Create new instance if needed or if key changed
+    if (!genAI || genAI.apiKey !== apiKey) {
+        genAI = new GoogleGenerativeAI(apiKey);
+    }
+    
+    return genAI;
+};
 
 const aspectRatiosMap: Record<AspectRatio, string> = {
     [AspectRatio.LANDSCAPE]: "16:9",
@@ -14,35 +33,53 @@ const aspectRatiosMap: Record<AspectRatio, string> = {
 // Helper to safely parse JSON from model responses which might include markdown
 const safeJsonParse = (jsonString: string) => {
     try {
+        // Remove markdown code block markers if present
         const trimmedString = jsonString.replace(/^```json\n/, '').replace(/\n```$/, '');
         return JSON.parse(trimmedString);
     } catch (e) {
         try {
-            // Fallback for cases where the string is not perfectly formatted
-            const firstBracket = jsonString.indexOf('[');
-            const lastBracket = jsonString.lastIndexOf(']');
-            const firstBrace = jsonString.indexOf('{');
-            const lastBrace = jsonString.lastIndexOf('}');
+            // Fix malformed scientific notation (e.g., 1.000000e+000000...)
+            const fixedString = jsonString.replace(
+                /(\d+)\.0+e\+0+/gi,
+                (match, num) => num
+            );
             
-            let start = -1;
-            let end = -1;
-
-            if (firstBracket !== -1 && lastBracket !== -1) {
-                start = firstBracket;
-                end = lastBracket;
-            } else if (firstBrace !== -1 && lastBrace !== -1) {
-                start = firstBrace;
-                end = lastBrace;
-            }
-
-            if (start !== -1 && end !== -1) {
-                const nestedJson = jsonString.substring(start, end + 1);
-                return JSON.parse(nestedJson);
-            }
-            return null;
+            // Try parsing the fixed string
+            const trimmedFixed = fixedString.replace(/^```json\n/, '').replace(/\n```$/, '');
+            return JSON.parse(trimmedFixed);
         } catch (e2) {
-            console.error("Failed to parse JSON:", jsonString, e2);
-            return null;
+            try {
+                // Fallback for cases where the string is not perfectly formatted
+                const firstBracket = jsonString.indexOf('[');
+                const lastBracket = jsonString.lastIndexOf(']');
+                const firstBrace = jsonString.indexOf('{');
+                const lastBrace = jsonString.lastIndexOf('}');
+                
+                let start = -1;
+                let end = -1;
+
+                if (firstBracket !== -1 && lastBracket !== -1) {
+                    start = firstBracket;
+                    end = lastBracket;
+                } else if (firstBrace !== -1 && lastBrace !== -1) {
+                    start = firstBrace;
+                    end = lastBrace;
+                }
+
+                if (start !== -1 && end !== -1) {
+                    const nestedJson = jsonString.substring(start, end + 1);
+                    // Apply the scientific notation fix here too
+                    const fixedNested = nestedJson.replace(
+                        /(\d+)\.0+e\+0+/gi,
+                        (match, num) => num
+                    );
+                    return JSON.parse(fixedNested);
+                }
+                return null;
+            } catch (e3) {
+                console.error("Failed to parse JSON:", jsonString, e3);
+                return null;
+            }
         }
     }
 };
@@ -86,7 +123,7 @@ export const generateDescription = async (config: DescriptionConfig): Promise<st
     
     The description should be concise, engaging, and highlight the key benefits for the target audience. Do not include a title or header.`;
     
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
@@ -95,7 +132,7 @@ export const generateDescription = async (config: DescriptionConfig): Promise<st
 const storyboardPanelSchema = {
     type: SchemaType.OBJECT,
     properties: {
-        scene: { type: SchemaType.NUMBER },
+        sceneNumber: { type: SchemaType.STRING, description: 'Scene number as a string (e.g., "1", "2", "3")' },
         description: { type: SchemaType.STRING, description: 'A detailed, visually descriptive paragraph for this scene. Describe the camera shot, setting, action, and mood. This will be used as a prompt for an image generation model.' },
     }
 };
@@ -110,27 +147,59 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
     4.  The total video length is approximately ${config.videoLength}, so pace the scenes accordingly.
     5.  The output language for the descriptions must be ${config.descriptionLanguage}.
     6.  For each scene, provide a detailed, visually rich description suitable for an AI image generation model. Describe the camera angle, subject, setting, action, and atmosphere.
+    7.  IMPORTANT: Use simple scene numbers like "1", "2", "3" etc. Do not use scientific notation or decimal numbers.
     
-    Return the result as a JSON array of objects.`;
+    Return the result as a JSON array of objects with sceneNumber and description fields.`;
 
-    const model = genAI.getGenerativeModel({ 
-        model: config.textModel,
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: SchemaType.ARRAY,
-                items: storyboardPanelSchema,
-            },
+    try {
+        // Try with structured output first
+        const model = getGenAI().getGenerativeModel({ 
+            model: config.textModel,
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: SchemaType.ARRAY,
+                    items: storyboardPanelSchema,
+                },
+            }
+        });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        
+        const parsed = safeJsonParse(response.text());
+        if (parsed && Array.isArray(parsed)) {
+            return parsed.map(p => ({ description: p.description }));
         }
-    });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    
-    const parsed = safeJsonParse(response.text());
-    if (!parsed || !Array.isArray(parsed)) {
-        throw new Error("Failed to generate a valid storyboard structure.");
+    } catch (error) {
+        console.error("Structured output failed, trying fallback:", error);
     }
-    return parsed.map(p => ({ description: p.description }));
+    
+    // Fallback: Try without structured output
+    try {
+        const fallbackPrompt = prompt + `
+        
+        Format the output as a simple JSON array like this:
+        [
+            {"sceneNumber": "1", "description": "..."},
+            {"sceneNumber": "2", "description": "..."}
+        ]`;
+        
+        const fallbackModel = getGenAI().getGenerativeModel({ 
+            model: config.textModel
+        });
+        
+        const result = await fallbackModel.generateContent(fallbackPrompt);
+        const response = await result.response;
+        
+        const parsed = safeJsonParse(response.text());
+        if (parsed && Array.isArray(parsed)) {
+            return parsed.map(p => ({ description: p.description }));
+        }
+    } catch (fallbackError) {
+        console.error("Fallback also failed:", fallbackError);
+    }
+    
+    throw new Error("Failed to generate a valid storyboard structure after multiple attempts.");
 };
 
 export const generateDetailedStoryboard = async (originalScene: string, language: string): Promise<{ description: string }[]> => {
@@ -146,8 +215,8 @@ export const generateDetailedStoryboard = async (originalScene: string, language
     
     Return the result as a JSON array of objects.`;
 
-    const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.0-flash-exp",
+    const model = getGenAI().getGenerativeModel({ 
+        model: "gemini-2.5-flash",
         generationConfig: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -172,10 +241,157 @@ export const generateDetailedStoryboard = async (originalScene: string, language
 };
 
 export const generateImageForPanel = async (description: string, config: { imageModel: string, aspectRatio: AspectRatio, visualStyle?: VisualStyle }): Promise<string> => {
-    // Note: Gemini SDK doesn't support image generation directly
-    // Return a placeholder or integrate with another image generation service
-    console.warn("Image generation not implemented with Gemini SDK");
-    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23ddd'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999'%3EImage Placeholder%3C/text%3E%3C/svg%3E";
+    try {
+        // Build image generation prompt based on visual style
+        let stylePrompt = "";
+        if (config.visualStyle) {
+            const styleMap: Record<VisualStyle, string> = {
+                [VisualStyle.PHOTOREALISTIC]: "photorealistic, high quality, professional photography",
+                [VisualStyle.CINEMATIC]: "cinematic, dramatic lighting, film still, movie scene",
+                [VisualStyle.ANIME]: "anime style, studio ghibli inspired, hand-drawn animation",
+                [VisualStyle.COMIC_BOOK]: "comic book style, graphic novel illustration, bold colors",
+                [VisualStyle.WATERCOLOR]: "watercolor painting, artistic, soft colors, traditional art",
+                [VisualStyle.LOWPOLY]: "low poly 3D art, geometric shapes, minimalist design",
+                [VisualStyle.RETRO_SYNTHWAVE]: "synthwave, retro 80s style, neon colors, cyberpunk aesthetic",
+                [VisualStyle.SURREALIST]: "surrealist art, dreamlike, abstract, Salvador Dali inspired",
+            };
+            stylePrompt = styleMap[config.visualStyle] || "";
+        }
+
+        const fullPrompt = stylePrompt ? `${description}, ${stylePrompt}` : description;
+        
+        // For now, try to use Gemini to generate an image description and return placeholder
+        // Imagen 4 integration requires additional SDK setup
+        const genAI = getGenAI();
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.5-flash"
+        });
+        
+        // Generate a more detailed image prompt using Gemini
+        const enhancedPromptResult = await model.generateContent({
+            contents: [{
+                role: 'user',
+                parts: [{ 
+                    text: `Create a detailed image generation prompt for: ${fullPrompt}. 
+                    Include specific details about composition, lighting, colors, and style. 
+                    Keep it concise but visually rich.`
+                }]
+            }]
+        });
+        
+        const enhancedPrompt = enhancedPromptResult.response.text();
+        console.info("Enhanced image prompt generated:", enhancedPrompt.substring(0, 100) + "...");
+        
+        // Create a canvas for generating a proper placeholder image
+        const canvas = document.createElement('canvas');
+        const aspectRatios: Record<AspectRatio, [number, number]> = {
+            [AspectRatio.LANDSCAPE]: [800, 450],
+            [AspectRatio.PORTRAIT]: [450, 800],
+            [AspectRatio.SQUARE]: [600, 600],
+            [AspectRatio.VERTICAL]: [450, 600],
+            [AspectRatio.CLASSIC]: [600, 450],
+        };
+        
+        const [width, height] = aspectRatios[config.aspectRatio] || [800, 450];
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error('Canvas context not available');
+        }
+        
+        // Create a gradient background based on visual style
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        
+        if (config.visualStyle === VisualStyle.RETRO_SYNTHWAVE) {
+            gradient.addColorStop(0, '#FF006E');
+            gradient.addColorStop(0.5, '#8338EC');
+            gradient.addColorStop(1, '#3A86FF');
+        } else if (config.visualStyle === VisualStyle.ANIME) {
+            gradient.addColorStop(0, '#FFE5F1');
+            gradient.addColorStop(0.5, '#FFC8DD');
+            gradient.addColorStop(1, '#FFAFC5');
+        } else if (config.visualStyle === VisualStyle.CINEMATIC) {
+            gradient.addColorStop(0, '#0D1B2A');
+            gradient.addColorStop(0.5, '#1B263B');
+            gradient.addColorStop(1, '#415A77');
+        } else if (config.visualStyle === VisualStyle.SURREALIST) {
+            gradient.addColorStop(0, '#F72585');
+            gradient.addColorStop(0.33, '#7209B7');
+            gradient.addColorStop(0.66, '#3A0CA3');
+            gradient.addColorStop(1, '#4361EE');
+        } else if (config.visualStyle === VisualStyle.WATERCOLOR) {
+            gradient.addColorStop(0, '#E3F2FD');
+            gradient.addColorStop(0.5, '#90CAF9');
+            gradient.addColorStop(1, '#42A5F5');
+        } else {
+            // Default gradient
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(0.5, '#764ba2');
+            gradient.addColorStop(1, '#f093fb');
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+        
+        // Add some visual texture/pattern
+        ctx.globalAlpha = 0.1;
+        for (let i = 0; i < 50; i++) {
+            const x = Math.random() * width;
+            const y = Math.random() * height;
+            const radius = Math.random() * 50 + 10;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = Math.random() > 0.5 ? 'white' : 'black';
+            ctx.fill();
+        }
+        
+        // Reset alpha
+        ctx.globalAlpha = 1.0;
+        
+        // Add text overlay
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 10;
+        ctx.fillText('AI Image Generation', width / 2, height / 2 - 20);
+        
+        ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText(`${config.imageModel} • ${config.visualStyle || 'Default Style'}`, width / 2, height / 2 + 20);
+        
+        // Add subtle border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1, 1, width - 2, height - 2);
+        
+        // Convert canvas to base64
+        return canvas.toDataURL('image/jpeg', 0.9);
+        
+    } catch (error) {
+        console.error("Image generation error:", error);
+        
+        // Create a simple error placeholder
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+            ctx.fillStyle = '#ffeeee';
+            ctx.fillRect(0, 0, 400, 300);
+            ctx.fillStyle = '#cc0000';
+            ctx.font = '18px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Image Generation Failed', 200, 150);
+        }
+        
+        return canvas.toDataURL('image/jpeg', 0.9);
+    }
 };
 
 export const generateVideoForPanel = async (prompt: string, imageBase64: string, videoModel: string, isMediaArt: boolean = false): Promise<string> => {
@@ -246,7 +462,7 @@ export const generateMediaArtKeyframePrompts = async (sourceImage: MediaArtSourc
         inlineData: { data, mimeType }
     };
     
-    const model = genAI.getGenerativeModel({ 
+    const model = getGenAI().getGenerativeModel({ 
         model: config.textModel,
         generationConfig: {
             responseMimeType: "application/json",

@@ -74,7 +74,7 @@ const App: React.FC = () => {
         targetAudience: '',
         tone: Tone.FRIENDLY,
         language: 'English',
-        selectedModel: 'gemini-2.0-flash-exp',
+        selectedModel: 'gemini-2.5-flash',
     };
     const [descriptionConfig, setDescriptionConfig] = useState<DescriptionConfig>(initialDescriptionConfig);
     const [description, setDescription] = useState('');
@@ -89,8 +89,8 @@ const App: React.FC = () => {
         mood: Mood.EPIC,
         descriptionLanguage: 'English',
         textModel: 'gemini-2.5-flash',
-        imageModel: 'imagen-4.0-generate-001',
-        videoModel: 'veo-2.0-generate-001',
+        imageModel: 'imagen-4',
+        videoModel: 'veo-3',
     };
     const [storyboardConfig, setStoryboardConfig] = useState<StoryboardConfig>(initialStoryboardConfig);
     const [storyIdea, setStoryIdea] = useState('');
@@ -116,7 +116,7 @@ const App: React.FC = () => {
         effect: VisualArtEffect.GLITCH,
         textModel: 'gemini-2.5-flash',
         imageModel: 'dall-e-3',
-        videoModel: 'veo-2.0-generate-001',
+        videoModel: 'veo-3',
         temperature: 0.7,
         quality: 'hd',
         outputFormat: 'video',
@@ -178,7 +178,7 @@ const App: React.FC = () => {
 
             const result = await aiService.generateText({
                 prompt,
-                model: descriptionConfig.selectedModel || 'gemini-2.0-flash-exp',
+                model: descriptionConfig.selectedModel || 'gemini-2.5-flash',
                 temperature: 0.7,
                 maxTokens: 1000
             });
@@ -211,7 +211,7 @@ const App: React.FC = () => {
             for (let i = 0; i < panels.length; i++) {
                 try {
                     const imageBase64 = await geminiService.generateImageForPanel(panels[i].description, config);
-                    currentPanels[i] = { ...currentPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
+                    currentPanels[i] = { ...currentPanels[i], imageUrl: imageBase64, isLoadingImage: false };
                 } catch (imgErr: any) {
                     console.error(`Image generation failed for panel ${i}:`, imgErr);
                     const isQuotaError = imgErr.message?.includes('429');
@@ -243,7 +243,7 @@ const App: React.FC = () => {
             for (let i = 0; i < newPanels.length; i++) {
                 try {
                     const imageBase64 = await geminiService.generateImageForPanel(newPanels[i].description, storyboardConfig);
-                    currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: `data:image/jpeg;base64,${imageBase64}`, isLoadingImage: false };
+                    currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: imageBase64, isLoadingImage: false };
                 } catch (imgErr) {
                     currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: 'error', isLoadingImage: false };
                 }
@@ -278,7 +278,7 @@ const App: React.FC = () => {
 
         try {
             const imageBase64 = await geminiService.generateImageForPanel(panels[index].description, storyboardConfig);
-            panels[index].imageUrl = `data:image/jpeg;base64,${imageBase64}`;
+            panels[index].imageUrl = imageBase64;
         } catch (e) {
             panels[index].imageUrl = 'error';
         } finally {
