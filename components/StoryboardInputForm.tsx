@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StoryboardSettings from './StoryboardSettings';
 import { StoryboardConfig } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -10,12 +10,20 @@ interface StoryboardInputFormProps {
     config: StoryboardConfig;
     setConfig: (config: StoryboardConfig) => void;
     onShowSampleGallery: () => void;
+    initialIdea?: string;  // ✅ 추가
 }
 
-const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, isLoading, config, setConfig, onShowSampleGallery }) => {
+const StoryboardInputForm: React.FC<StoryboardInputFormProps> = ({ onGenerate, isLoading, config, setConfig, onShowSampleGallery, initialIdea }) => {
     const { t } = useTranslation();
-    const [idea, setIdea] = useState('');
+    const [idea, setIdea] = useState(initialIdea || '');
     const [showSettings, setShowSettings] = useState(true);
+
+    // useEffect 추가하여 props 변경 시 업데이트
+    useEffect(() => {
+        if (initialIdea) {
+            setIdea(initialIdea);
+        }
+    }, [initialIdea]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

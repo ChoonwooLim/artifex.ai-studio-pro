@@ -107,8 +107,10 @@ class AIService {
         
         console.log('getProviderForModel called with:', model);
 
-        // OpenAI models
-        if (modelLower.includes('gpt') || modelLower.includes('dall-e') || modelLower.includes('o1')) {
+        // OpenAI models - include GPT-5, GPT-4.1, and o4-mini
+        if (modelLower.includes('gpt') || modelLower.includes('dall-e') || 
+            modelLower.includes('o1') || modelLower.includes('o4') || 
+            modelLower.includes('sora') || modelLower.includes('realtime')) {
             return 'openai';
         }
         
@@ -127,11 +129,18 @@ class AIService {
             return 'mistral';
         }
         
-        // Google models - include version numbers
+        // Google models - include version numbers and Veo video models
         if (modelLower.includes('gemini') || modelLower.includes('palm') || 
-            modelLower.includes('imagen') || modelLower.includes('2.5') || 
-            modelLower.includes('2.0') || modelLower.includes('1.5')) {
+            modelLower.includes('imagen') || modelLower.includes('veo') ||
+            modelLower.includes('2.5') || modelLower.includes('2.0') || 
+            modelLower.includes('1.5')) {
             return 'google';
+        }
+        
+        // Local models - Wan2.2
+        if (modelLower.includes('wan2.2') || modelLower.includes('local')) {
+            console.log('Wan2.2 Local model detected - GPU implementation pending');
+            return 'local';
         }
         
         // Replicate models (most open source and third-party models)
@@ -140,6 +149,7 @@ class AIService {
             modelLower.includes('kandinsky') || modelLower.includes('realvis') ||
             modelLower.includes('ideogram') || modelLower.includes('playground') ||
             modelLower.includes('recraft') || modelLower.includes('luma') ||
+            modelLower.includes('pika') || modelLower.includes('ray2') ||
             modelLower.includes('dream-machine') || modelLower.includes('runway') ||
             modelLower.includes('cogvideo') || modelLower.includes('animate') ||
             modelLower.includes('zeroscope') || modelLower.includes('modelscope') ||
@@ -555,8 +565,13 @@ class AIService {
             }
 
             if (provider === 'google' && this.googleGenAI) {
-                console.log('Note: Google Veo API is not yet publicly available. Using placeholder.');
-                return 'https://via.placeholder.com/1920x1080?text=Video+Generation+Coming+Soon';
+                console.log('Note: Google Veo API is not yet publicly available through SDK. Using placeholder.');
+                return 'https://via.placeholder.com/1920x1080?text=Veo+Video+Generation+Coming+Soon';
+            }
+            
+            if (provider === 'local') {
+                console.log('Note: Wan2.2 Local model requires GPU setup. Implementation pending.');
+                return 'https://via.placeholder.com/1920x1080?text=Local+GPU+Model+Setup+Required';
             }
 
             throw new Error(`Video generation not supported for provider: ${provider}`);

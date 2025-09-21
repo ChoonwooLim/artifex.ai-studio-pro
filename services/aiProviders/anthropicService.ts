@@ -56,7 +56,7 @@ export class AnthropicService {
                 'claude-3-haiku': 'claude-3-haiku-20240307'
             };
 
-            const actualModel = modelMap[options.model] || 'claude-3-5-sonnet-20241022';
+            const actualModel = modelMap[options.model] || options.model;
 
             const response = await this.client.messages.create({
                 model: actualModel,

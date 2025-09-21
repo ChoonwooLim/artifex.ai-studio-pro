@@ -355,6 +355,7 @@ const App: React.FC = () => {
     
     const handleSelectSampleStory = (story: SampleStory) => {
         console.log('handleSelectSampleStory - Current user settings:', {
+            sceneCount: storyboardConfig.sceneCount,        // 추가
             aspectRatio: storyboardConfig.aspectRatio,
             textModel: storyboardConfig.textModel,
             imageModel: storyboardConfig.imageModel,
@@ -367,6 +368,7 @@ const App: React.FC = () => {
         // Preserve user's selected settings when loading sample story
         const configWithUserSettings = {
             ...story.config,
+            sceneCount: storyboardConfig.sceneCount,        // Keep user's sceneCount ✅
             aspectRatio: storyboardConfig.aspectRatio,      // Keep user's aspectRatio
             textModel: storyboardConfig.textModel,          // Keep user's text model
             imageModel: storyboardConfig.imageModel,        // Keep user's image model
@@ -378,7 +380,8 @@ const App: React.FC = () => {
         
         setStoryboardConfig(configWithUserSettings);
         setIsSampleGalleryOpen(false);
-        handleGenerateStoryboard(story.idea, configWithUserSettings);
+        // ✅ 자동 실행 제거 - 사용자가 생성 버튼을 누를 때까지 대기
+        // handleGenerateStoryboard(story.idea, configWithUserSettings);
     };
 
     // Project Management (DB)
@@ -781,18 +784,22 @@ const App: React.FC = () => {
                         {mode === AppMode.STORYBOARD && (
                             <div className="max-w-5xl mx-auto">
                                 <Suspense fallback={<LoadingFallback />}>
-                                    {!storyboardPanels.length && !isGeneratingStoryboard && (
-                                        <StoryboardInputForm
-                                            onGenerate={handleGenerateStoryboard}
-                                            isLoading={isGeneratingStoryboard}
-                                            config={storyboardConfig}
-                                            setConfig={setStoryboardConfig}
-                                            onShowSampleGallery={() => handleShowSampleGallery('story')}
-                                        />
-                                    )}
+                                    {/* 입력 폼은 항상 표시 - 고급설정 수동 제어 위함 */}
+                                    <StoryboardInputForm
+                                        onGenerate={handleGenerateStoryboard}
+                                        isLoading={isGeneratingStoryboard}
+                                        config={storyboardConfig}
+                                        setConfig={setStoryboardConfig}
+                                        onShowSampleGallery={() => handleShowSampleGallery('story')}
+                                        initialIdea={storyIdea}  // ✅ 추가
+                                    />
+                                    
                                     {error && <p className="text-red-400 mt-4">{error}</p>}
+                                    
+                                    {/* 스토리보드는 생성 중이거나 패널이 있을 때만 표시 */}
                                     {(isGeneratingStoryboard || storyboardPanels.length > 0) && (
-                                        <StoryboardDisplay 
+                                        <div className="mt-6">
+                                            <StoryboardDisplay 
                                             panels={storyboardPanels} 
                                             storyIdea={storyIdea}
                                             onExpandScene={handleExpandScene}
@@ -807,7 +814,8 @@ const App: React.FC = () => {
                                             isGeneratingImages={isGeneratingImages}
                                             onExportPdf={handleExportPdf}
                                             isExportingPdf={isExportingPdf}
-                                        />
+                                            />
+                                        </div>
                                     )}
                                 </Suspense>
                                 <VideoDisplay panels={storyboardPanels} />

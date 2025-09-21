@@ -55,18 +55,34 @@ export class OpenAIService {
 
         try {
             const modelMap: { [key: string]: string } = {
-                'gpt-5': 'gpt-4o',  // Fallback to gpt-4o until GPT-5 is available
-                'gpt-5-turbo': 'gpt-4o',  // Fallback to gpt-4o
-                'o1-pro': 'o1-preview',  // Use o1-preview as fallback
+                // GPT-5 시리즈 (2025년 9월 출시)
+                'gpt-5': 'gpt-5',
+                'gpt-5-mini': 'gpt-5-mini',
+                'gpt-5-nano': 'gpt-5-nano',
+                // GPT-4.1 시리즈 (2025년 출시)
+                'gpt-4.1': 'gpt-4.1',
+                'gpt-4.1-mini': 'gpt-4.1-mini',
+                // O 시리즈
+                'o4-mini': 'o4-mini',
                 'o1-preview': 'o1-preview',
                 'o1-mini': 'o1-mini',
+                // GPT-4o 시리즈
                 'gpt-4o': 'gpt-4o',
-                'gpt-4o-mini': 'gpt-4o-mini'
+                'gpt-4o-mini': 'gpt-4o-mini',
+                // 특수 모델
+                'gpt-realtime': 'gpt-realtime'
             };
 
             const actualModel = modelMap[options.model] || options.model;
 
-            const response = await this.client.chat.completions.create({
+            // GPT-5 시리즈 및 최신 모델 감지
+            const isNewGenerationModel = actualModel.startsWith('gpt-5') || 
+                                        actualModel.startsWith('gpt-4.1') ||
+                                        actualModel === 'o4-mini' ||
+                                        actualModel === 'gpt-realtime';
+
+            // 모델별 파라미터 구성
+            const completionParams: any = {
                 model: actualModel,
                 messages: [
                     {
@@ -74,9 +90,21 @@ export class OpenAIService {
                         content: options.prompt
                     }
                 ],
-                temperature: options.temperature || 0.7,
-                max_tokens: options.maxTokens || 2000
-            });
+                temperature: options.temperature || 0.7
+            };
+
+            // 모델에 따른 토큰 파라미터 설정
+            if (isNewGenerationModel) {
+                // GPT-5 시리즈는 max_completion_tokens 사용
+                completionParams.max_completion_tokens = options.maxTokens || 2000;
+                console.log(`Using max_completion_tokens for ${actualModel}: ${completionParams.max_completion_tokens}`);
+            } else {
+                // 기존 모델은 max_tokens 사용
+                completionParams.max_tokens = options.maxTokens || 2000;
+                console.log(`Using max_tokens for ${actualModel}: ${completionParams.max_tokens}`);
+            }
+
+            const response = await this.client.chat.completions.create(completionParams);
 
             return response.choices[0]?.message?.content || '';
         } catch (error: any) {
@@ -85,8 +113,8 @@ export class OpenAIService {
                 throw new Error('Invalid OpenAI API key. Please check your API key in settings.');
             } else if (error.status === 429) {
                 throw new Error('OpenAI rate limit reached. Please try again later.');
-            } else if (error.status === 404 && options.model.includes('gpt-5')) {
-                throw new Error('GPT-5 model may not be available yet. Please try GPT-4o or another model.');
+            } else if (error.status === 404) {
+                throw new Error(`Model ${options.model} not found. Please check if you have access to this model.`);
             }
             throw new Error(`OpenAI API error: ${error.message}`);
         }
@@ -113,8 +141,6 @@ export class OpenAIService {
         try {
             // Map display names to actual API model names
             const modelMap: { [key: string]: string } = {
-                'dall-e-4-hd': 'dall-e-3',  // Fallback to DALL-E 3 until 4 is available
-                'dall-e-4': 'dall-e-3',  // Fallback to DALL-E 3
                 'dall-e-3': 'dall-e-3',
                 'dall-e-3-hd': 'dall-e-3',
                 'dall-e-2': 'dall-e-2'
