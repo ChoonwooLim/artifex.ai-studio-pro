@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import { AspectRatio, DescriptionConfig, StoryboardConfig, VisualStyle, MediaArtStyle, VisualArtEffect, MediaArtSourceImage, MediaArtStyleParams, DataCompositionParams, DigitalNatureParams, AiDataSculptureParams, LightAndSpaceParams, KineticMirrorsParams, GenerativeBotanyParams, QuantumPhantasmParams, ArchitecturalProjectionParams } from "../types";
+import { AspectRatio, DescriptionConfig, StoryboardConfig, VisualStyle, MediaArtStyle, VisualArtEffect, MediaArtSourceImage, MediaArtStyleParams, DataCompositionParams, DigitalNatureParams, AiDataSculptureParams, LightAndSpaceParams, KineticMirrorsParams, GenerativeBotanyParams, QuantumPhantasmParams, ArchitecturalProjectionParams, Character } from "../types";
 import { aiService } from "./aiService";
+import characterConsistencyService from "./characterConsistencyService";
 
 // Dynamic API key initialization to support both environment variables and localStorage
 let genAI: GoogleGenerativeAI | null = null;
@@ -144,6 +145,14 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
     console.log('AspectRatio value:', config.aspectRatio);
     console.log('AspectRatio type:', typeof config.aspectRatio);
     console.log('Text model:', config.textModel);
+    console.log('Characters provided:', config.characters?.length || 0);
+    
+    // Build character consistency instructions if characters are provided
+    let characterInstructions = '';
+    if (config.characters && config.characters.length > 0) {
+        characterInstructions = '\n\n' + characterConsistencyService.buildConsistencyInstructions(config.characters);
+        characterInstructions += '\n\n**IMPORTANT**: When mentioning any character in the scene descriptions, refer to them by name and ensure their appearance matches the exact descriptions provided above.';
+    }
     
     const prompt = `Create a storyboard for a short video based on this idea: "${idea}".
 
@@ -156,6 +165,7 @@ export const generateStoryboard = async (idea: string, config: StoryboardConfig)
     6.  For each scene, provide a detailed, visually rich description suitable for an AI image generation model. Describe the camera angle, subject, setting, action, and atmosphere.
     7.  IMPORTANT: Use simple scene numbers like "1", "2", "3" etc. Do not use scientific notation or decimal numbers.
     8.  CRITICAL: You must return EXACTLY ${config.sceneCount} scenes, not more, not less.
+    ${characterInstructions}
     
     Return the result as a JSON array of EXACTLY ${config.sceneCount} objects with sceneNumber and description fields.
     Format the output as a simple JSON array like this:
@@ -270,8 +280,25 @@ export const generateDetailedStoryboard = async (originalScene: string, language
     return parsed.map(p => ({ description: p.description }));
 };
 
-export const generateImageForPanel = async (description: string, config: { imageModel: string, aspectRatio: AspectRatio, visualStyle?: VisualStyle }): Promise<string> => {
+export const generateImageForPanel = async (
+    description: string, 
+    config: { 
+        imageModel: string, 
+        aspectRatio: AspectRatio, 
+        visualStyle?: VisualStyle,
+        characters?: Character[] 
+    }
+): Promise<string> => {
     try {
+        // If characters are provided, inject their consistency details into the description
+        let enhancedDescription = description;
+        if (config.characters && config.characters.length > 0) {
+            enhancedDescription = characterConsistencyService.injectCharacterDetails(
+                description,
+                config.characters
+            );
+        }
+        
         // Build image generation prompt based on visual style
         let stylePrompt = "";
         if (config.visualStyle) {
@@ -288,7 +315,7 @@ export const generateImageForPanel = async (description: string, config: { image
             stylePrompt = styleMap[config.visualStyle] || "";
         }
 
-        const fullPrompt = stylePrompt ? `${description}, ${stylePrompt}` : description;
+        const fullPrompt = stylePrompt ? `${enhancedDescription}, ${stylePrompt}` : enhancedDescription;
         
         console.log(`Generating image with model: ${config.imageModel}`);
         console.log(`Image prompt: ${fullPrompt}`);

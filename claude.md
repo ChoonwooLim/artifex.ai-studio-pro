@@ -64,6 +64,7 @@ graph TD
 3. **AI Providers**: 다중 AI 제공자 통합
 4. **Database**: IndexedDB 기반 로컬 저장소
 5. **Internationalization**: 다국어 지원 시스템
+6. **Character Consistency**: 캐릭터 일관성 시스템 (🆕 개발 중)
 
 ### 프로젝트 구조
 ```
@@ -81,9 +82,11 @@ artifex.ai-studio-pro/
 ├── i18n/                       # 다국어 지원
 │   └── translations/           # 번역 파일
 ├── docs/
-│   └── ai-models/              # AI 모델 문서
-│       ├── AI_MODEL_INTEGRATION_PLAN.md
-│       └── MODEL_CHANGELOG.md
+│   ├── ai-models/              # AI 모델 문서
+│   │   ├── AI_MODEL_INTEGRATION_PLAN.md
+│   │   └── MODEL_CHANGELOG.md
+│   └── features/               # 기능별 상세 문서
+│       └── CHARACTER_CONSISTENCY_SYSTEM.md  # 캐릭터 일관성 시스템
 ├── scripts/                    # 유틸리티 스크립트
 └── Models/                     # 로컬 AI 모델 (gitignored)
 ```
@@ -107,7 +110,7 @@ artifex.ai-studio-pro/
 - **Anthropic Claude 4 통합**: Opus 4.1, Sonnet 4
 - **Wan2.2 로컬 모델**: 오프라인 비디오 생성
 - **Professional Mode**: 전문가용 고급 기능
-- **Character Consistency**: 캐릭터 일관성 유지
+- **Character Consistency**: 캐릭터 일관성 유지 🔥 [상세 계획](./docs/features/CHARACTER_CONSISTENCY_SYSTEM.md)
 - **Style Guide Manager**: 스타일 가이드 관리
 
 ### ❌ 미구현
@@ -213,6 +216,13 @@ When working on AI model features, ALWAYS reference:
    - Recent changes and updates
    - Deprecation notices
    - Performance benchmarks
+
+3. Check [CHARACTER_CONSISTENCY_SYSTEM.md](./docs/features/CHARACTER_CONSISTENCY_SYSTEM.md) for:
+   - Character consistency implementation
+   - Component architecture
+   - Prompt engineering strategies
+   - UI/UX guidelines
+   - Performance metrics
 
 ---
 

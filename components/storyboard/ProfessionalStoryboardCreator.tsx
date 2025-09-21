@@ -37,6 +37,8 @@ import { imageGenerator } from '../../services/professionalImageGenerator';
 import { characterManager } from '../../services/characterConsistency';
 import { styleGuideManager } from '../../services/styleGuideManager';
 import { promptEngineer } from '../../services/promptEngineering';
+import { CharacterPresetSelector } from '../character/CharacterPresetSelector';
+import { generatePromptFromPresets } from '../../data/characterPresets';
 
 interface Props {
   apiKeys: Record<string, string>;
@@ -86,6 +88,8 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewMode, setPreviewMode] = useState<'grid' | 'timeline' | 'fullscreen'>('grid');
   const [selectedPreset, setSelectedPreset] = useState<string>('');
+  const [showPresetSelector, setShowPresetSelector] = useState(false);
+  const [selectedCharacterForPresets, setSelectedCharacterForPresets] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -477,19 +481,126 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Character Management</h2>
-              <button
-                onClick={handleCreateCharacter}
-                className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
-              >
-                <Users className="w-5 h-5" />
-                <span>Add Character</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowPresetSelector(!showPresetSelector)}
+                  className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  <span>프리셋 선택기</span>
+                </button>
+                <button
+                  onClick={handleCreateCharacter}
+                  className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                >
+                  <Users className="w-5 h-5" />
+                  <span>Add Character</span>
+                </button>
+              </div>
             </div>
+            
+            {/* Preset Selector */}
+            {showPresetSelector && (
+              <CharacterPresetSelector
+                onPresetSelect={(presets) => {
+                  console.log('Selected presets:', presets);
+                }}
+                onGeneratePrompt={(prompt) => {
+                  if (selectedCharacterForPresets) {
+                    const updatedCharacters = project.characters.map(c => 
+                      c.id === selectedCharacterForPresets
+                        ? { ...c, visualDescription: prompt }
+                        : c
+                    );
+                    setProject(prev => ({ ...prev, characters: updatedCharacters }));
+                  } else if (project.characters.length > 0) {
+                    const firstCharacter = project.characters[0];
+                    const updatedCharacters = project.characters.map(c => 
+                      c.id === firstCharacter.id
+                        ? { ...c, visualDescription: prompt }
+                        : c
+                    );
+                    setProject(prev => ({ ...prev, characters: updatedCharacters }));
+                  } else {
+                    alert('캐릭터를 먼저 생성하세요.');
+                  }
+                }}
+              />
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {project.characters.map(character => (
                 <div key={character.id} className="bg-gray-800 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold mb-2">{character.name}</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold">{character.name}</h3>
+                    <button
+                      onClick={() => {
+                        setSelectedCharacterForPresets(character.id);
+                        setShowPresetSelector(true);
+                      }}
+                      className="p-1 text-purple-400 hover:text-purple-300 transition-colors"
+                      title="프리셋 적용"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  {/* Visual Description */}
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-400 mb-1">
+                      외형 설명
+                    </label>
+                    <textarea
+                      value={character.visualDescription || ''}
+                      onChange={(e) => {
+                        const updatedCharacters = project.characters.map(c => 
+                          c.id === character.id 
+                            ? { ...c, visualDescription: e.target.value }
+                            : c
+                        );
+                        setProject(prev => ({ ...prev, characters: updatedCharacters }));
+                      }}
+                      rows={3}
+                      className="w-full px-2 py-1 bg-gray-700 rounded text-sm"
+                      placeholder="프리셋을 선택하거나 직접 입력..."
+                    />
+                  </div>
+                  
+                  {/* Character Style Selector */}
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-400 mb-1">
+                      캐릭터 스타일
+                    </label>
+                    <select
+                      value={character.characterStyle || 'cinematic'}
+                      onChange={(e) => {
+                        const updatedCharacters = project.characters.map(c => 
+                          c.id === character.id 
+                            ? { ...c, characterStyle: e.target.value as any }
+                            : c
+                        );
+                        setProject(prev => ({ ...prev, characters: updatedCharacters }));
+                      }}
+                      className="w-full px-2 py-1 bg-gray-700 rounded text-sm"
+                    >
+                      <option value="cinematic">영화 (Cinematic)</option>
+                      <option value="photorealistic">실사 (Photorealistic)</option>
+                      <option value="animation">애니메이션 (Animation)</option>
+                      <option value="anime">애니메 (Anime)</option>
+                      <option value="concept-art">컨셉 아트 (Concept Art)</option>
+                    </select>
+                  </div>
+                  
+                  {/* Full Body Reference Image */}
+                  {character.fullBodyReference && (
+                    <div className="mb-3">
+                      <img 
+                        src={character.fullBodyReference} 
+                        alt={`${character.name} 전신 레퍼런스`}
+                        className="w-full h-48 object-cover rounded-lg mb-2"
+                      />
+                    </div>
+                  )}
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
@@ -529,16 +640,56 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
                     </div>
                   </div>
                   
-                  <button
-                    className="mt-4 w-full px-3 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors text-sm"
-                    onClick={() => {
-                      const sheet = characterManager.generateCharacterSheet(character);
-                      console.log('Character sheet prompt:', sheet);
-                      alert('Character sheet prompt generated! Check console.');
-                    }}
-                  >
-                    Generate Reference Sheet
-                  </button>
+                  <div className="mt-3 space-y-2">
+                    <button
+                      className="w-full px-3 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center justify-center space-x-2"
+                      onClick={async () => {
+                        const styleModifier = character.characterStyle === 'photorealistic' 
+                          ? 'photorealistic, ultra realistic, 8k resolution' 
+                          : character.characterStyle === 'animation' 
+                          ? '3D animation style, pixar style, disney style'
+                          : character.characterStyle === 'anime'
+                          ? 'anime style, manga style, japanese animation'
+                          : character.characterStyle === 'concept-art'
+                          ? 'concept art, digital painting, artstation'
+                          : 'cinematic, movie still, film grain';
+                        
+                        const fullBodyPrompt = `Full body portrait, standing pose, complete view from head to toe, ${character.visualDescription}, ${styleModifier}, professional lighting, neutral background, character reference sheet`;
+                        
+                        try {
+                          const imageUrl = await imageGenerator.generateImage(
+                            fullBodyPrompt,
+                            { ...project.settings, size: '1024x1792' },
+                            apiKeys
+                          );
+                          
+                          const updatedCharacters = project.characters.map(c => 
+                            c.id === character.id 
+                              ? { ...c, fullBodyReference: imageUrl }
+                              : c
+                          );
+                          setProject(prev => ({ ...prev, characters: updatedCharacters }));
+                        } catch (error) {
+                          console.error('Failed to generate full body reference:', error);
+                          alert('전신 레퍼런스 생성 실패: ' + error.message);
+                        }
+                      }}
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>전신 레퍼런스 생성</span>
+                    </button>
+                    
+                    <button
+                      className="w-full px-3 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                      onClick={() => {
+                        const sheet = characterManager.generateCharacterSheet(character);
+                        console.log('Character sheet prompt:', sheet);
+                        alert('Character sheet prompt generated! Check console.');
+                      }}
+                    >
+                      캐릭터 시트 생성
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

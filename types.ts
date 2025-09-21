@@ -75,6 +75,29 @@ export interface DescriptionConfig {
     selectedModel?: string;
 }
 
+// Character Consistency Types
+export interface Character {
+    id: string;
+    name: string;
+    role: 'protagonist' | 'supporting' | 'extra';
+    physicalDescription: string;
+    clothingDescription: string;
+    personalityTraits?: string;
+    referenceImageUrl?: string;
+    consistencyPrompt?: string;
+    identityMarkers?: string[];
+}
+
+export interface CharacterSet {
+    id: string;
+    name: string;
+    description?: string;
+    characters: Character[];
+    genre?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface StoryboardConfig {
     sceneCount: number;
     aspectRatio: AspectRatio;
@@ -85,6 +108,11 @@ export interface StoryboardConfig {
     textModel: string;
     imageModel: string;
     videoModel: string;
+    // Character consistency fields
+    characterSetId?: string;
+    characters?: Character[];
+    useCharacterConsistency?: boolean;
+    characterStyle?: 'realistic' | 'anime' | 'cartoon' | 'artistic';
 }
 
 export interface StoryboardPanel {

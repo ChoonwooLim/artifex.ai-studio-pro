@@ -4,6 +4,7 @@ export interface CharacterReference {
   description: string;
   visualDescription: string;
   referenceImages?: string[];
+  characterStyle?: 'cinematic' | 'photorealistic' | 'animation' | 'anime' | 'concept-art';
   characterTraits: {
     age?: string;
     gender?: string;
@@ -17,6 +18,7 @@ export interface CharacterReference {
   };
   consistencyPrompt: string;
   seed?: number;
+  fullBodyReference?: string;
 }
 
 export interface VisualStyleGuide {

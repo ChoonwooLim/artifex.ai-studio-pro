@@ -206,6 +206,31 @@ const App: React.FC = () => {
         }
     };
 
+    // Character Reference Image Generation
+    const handleGenerateCharacterImage = async (character: any): Promise<string> => {
+        try {
+            const characterConsistencyService = (await import('./services/characterConsistencyService')).default;
+            
+            // Generate prompt for character reference
+            const prompt = await characterConsistencyService.generateReferenceImagePrompt(
+                character,
+                storyboardConfig.visualStyle || 'photorealistic'
+            );
+            
+            // Generate image using the configured image model
+            const imageBase64 = await geminiService.generateImageForPanel(prompt, {
+                imageModel: storyboardConfig.imageModel,
+                aspectRatio: AspectRatio.SQUARE, // Use square for character portraits
+                visualStyle: storyboardConfig.visualStyle
+            });
+            
+            return imageBase64;
+        } catch (error) {
+            console.error('Failed to generate character image:', error);
+            throw error;
+        }
+    };
+
     // Handlers for Storyboard Mode
     const handleGenerateStoryboard = async (idea: string, config: StoryboardConfig) => {
         console.log('handleGenerateStoryboard called with config:', config);
@@ -214,6 +239,7 @@ const App: React.FC = () => {
         console.log('Config textModel:', config.textModel);
         console.log('Config videoModel:', config.videoModel);
         console.log('Config language:', config.descriptionLanguage);
+        console.log('Characters:', config.characters?.length || 0);
         setStoryIdea(idea);
         setStoryboardConfig(config);
         setIsGeneratingStoryboard(true);
@@ -244,7 +270,10 @@ const App: React.FC = () => {
             let currentPanels = [...initialPanels];
             for (let i = 0; i < limitedPanels.length; i++) {
                 try {
-                    const imageBase64 = await geminiService.generateImageForPanel(limitedPanels[i].description, config);
+                    const imageBase64 = await geminiService.generateImageForPanel(limitedPanels[i].description, {
+                        ...config,
+                        characters: config.characters
+                    });
                     currentPanels[i] = { ...currentPanels[i], imageUrl: imageBase64, isLoadingImage: false };
                 } catch (imgErr: any) {
                     console.error(`Image generation failed for panel ${i}:`, imgErr);
@@ -276,7 +305,10 @@ const App: React.FC = () => {
             let currentDetailedPanels = [...newPanels];
             for (let i = 0; i < newPanels.length; i++) {
                 try {
-                    const imageBase64 = await geminiService.generateImageForPanel(newPanels[i].description, storyboardConfig);
+                    const imageBase64 = await geminiService.generateImageForPanel(newPanels[i].description, {
+                        ...storyboardConfig,
+                        characters: storyboardConfig.characters
+                    });
                     currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: imageBase64, isLoadingImage: false };
                 } catch (imgErr) {
                     currentDetailedPanels[i] = { ...currentDetailedPanels[i], imageUrl: 'error', isLoadingImage: false };
@@ -311,7 +343,10 @@ const App: React.FC = () => {
         setStoryboardPanels(panels);
 
         try {
-            const imageBase64 = await geminiService.generateImageForPanel(panels[index].description, storyboardConfig);
+            const imageBase64 = await geminiService.generateImageForPanel(panels[index].description, {
+                ...storyboardConfig,
+                characters: storyboardConfig.characters
+            });
             panels[index].imageUrl = imageBase64;
         } catch (e) {
             panels[index].imageUrl = 'error';
@@ -676,7 +711,10 @@ const App: React.FC = () => {
             // Step 2: Generate keyframe images sequentially to avoid rate limiting.
             let previousImage: string;
             try {
-                const img0 = await geminiService.generateImageForPanel(keyframePrompts[0], { ...config });
+                const img0 = await geminiService.generateImageForPanel(keyframePrompts[0], { 
+                    ...config,
+                    characters: config.characters
+                });
                 previousImage = `data:image/jpeg;base64,${img0}`;
             } catch (e: any) {
                 const isQuota = e.message?.includes('429') || e.toString().includes('429');
@@ -687,7 +725,10 @@ const App: React.FC = () => {
             for (let i = 1; i < keyframePrompts.length; i++) {
                 let currentImage: string;
                  try {
-                    const img = await geminiService.generateImageForPanel(keyframePrompts[i], { ...config });
+                    const img = await geminiService.generateImageForPanel(keyframePrompts[i], { 
+                        ...config,
+                        characters: config.characters
+                    });
                     currentImage = `data:image/jpeg;base64,${img}`;
                 } catch (e: any) {
                     const isQuota = e.message?.includes('429') || e.toString().includes('429');
@@ -792,6 +833,7 @@ const App: React.FC = () => {
                                         setConfig={setStoryboardConfig}
                                         onShowSampleGallery={() => handleShowSampleGallery('story')}
                                         initialIdea={storyIdea}  // ✅ 추가
+                                        onGenerateCharacterImage={handleGenerateCharacterImage}  // ✅ 캐릭터 이미지 생성 함수
                                     />
                                     
                                     {error && <p className="text-red-400 mt-4">{error}</p>}
