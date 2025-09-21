@@ -897,8 +897,14 @@ const App: React.FC = () => {
                                 <Suspense fallback={<LoadingFallback />}>
                                     <CharacterCreator
                                         onGenerateCharacterImage={handleGenerateCharacterImage}
-                                        apiKeys={apiKeys}
-                                        onUpdateApiKey={handleApiKeyChange}
+                                        apiKeys={{
+                                            openai: import.meta.env.VITE_OPENAI_API_KEY || '',
+                                            google: import.meta.env.VITE_GOOGLE_API_KEY || '',
+                                            anthropic: import.meta.env.VITE_ANTHROPIC_API_KEY || '',
+                                        }}
+                                        onUpdateApiKey={(service, key) => {
+                                            console.log('API Key update requested:', service, key);
+                                        }}
                                     />
                                 </Suspense>
                             </div>

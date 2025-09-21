@@ -26,8 +26,7 @@ import { useTranslation } from '../i18n/LanguageContext';
 import CharacterManager from './character/CharacterManager';
 import { CharacterPresetSelector } from './character/CharacterPresetSelector';
 import { CHARACTER_PRESETS, generatePromptFromPresets } from '../data/characterPresets';
-import { imageGenerator } from '../services/professionalImageGenerator';
-import { characterManager } from '../services/characterConsistency';
+import geminiService from '../services/geminiService';
 
 interface CharacterCreatorProps {
     onGenerateCharacterImage?: (character: Character) => Promise<string>;
@@ -139,15 +138,9 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 prompt = customPrompt || `${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}`;
             }
             
-            const imageUrl = await imageGenerator.generateImage(
+            const imageUrl = await geminiService.generateSingleImage(
                 prompt,
-                {
-                    model: 'dall-e-3',
-                    quality: 'hd',
-                    style: 'vivid',
-                    size: type === 'fullbody' ? '1024x1792' : '1024x1024'
-                },
-                apiKeys
+                'imagen-3-fast-generate-001'
             );
             
             const updatedCharacter = { ...selectedCharacter };
@@ -203,6 +196,26 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     }, [characters]);
 
     // Preset handling
+    const handleNewCharacterPresetPrompt = useCallback((prompt: string) => {
+        setNewCharacter(prev => ({ 
+            ...prev, 
+            physicalDescription: prompt 
+        }));
+        setShowPresetSelector(false);
+    }, []);
+
+    const handleSelectedCharacterPresetPrompt = useCallback((prompt: string) => {
+        if (selectedCharacter) {
+            const updatedCharacter = { 
+                ...selectedCharacter, 
+                physicalDescription: prompt 
+            };
+            handleUpdateCharacter(updatedCharacter);
+            setSelectedCharacter(updatedCharacter);
+            setShowPresetSelector(false);
+        }
+    }, [selectedCharacter, handleUpdateCharacter]);
+
     const handlePresetApply = useCallback((presets: Record<string, string[]>) => {
         const physicalCategories = ['bodyType', 'faceShape', 'ageRange', 'hairStyle', 'specialFeatures'];
         const clothingCategories = ['clothingStyle', 'accessories'];
@@ -343,13 +356,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     <div className="mb-4">
                                         <CharacterPresetSelector
                                             onPresetSelect={handlePresetApply}
-                                            onGeneratePrompt={(prompt) => {
-                                                setNewCharacter({ 
-                                                    ...newCharacter, 
-                                                    physicalDescription: prompt 
-                                                });
-                                                setShowPresetSelector(false);
-                                            }}
+                                            onGeneratePrompt={handleNewCharacterPresetPrompt}
                                         />
                                     </div>
                                 )}
@@ -542,15 +549,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     <div className="mb-6">
                                         <CharacterPresetSelector
                                             onPresetSelect={handlePresetApply}
-                                            onGeneratePrompt={(prompt) => {
-                                                const updatedCharacter = { 
-                                                    ...selectedCharacter, 
-                                                    physicalDescription: prompt 
-                                                };
-                                                handleUpdateCharacter(updatedCharacter);
-                                                setSelectedCharacter(updatedCharacter);
-                                                setShowPresetSelector(false);
-                                            }}
+                                            onGeneratePrompt={handleSelectedCharacterPresetPrompt}
                                         />
                                     </div>
                                 )}
