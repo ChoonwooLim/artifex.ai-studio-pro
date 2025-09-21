@@ -18,7 +18,7 @@ const ModeSwitcher: React.FC<ModeSwitcherProps> = ({ mode, setMode }) => {
     };
 
     return (
-        <div className="p-1 bg-slate-800/70 border border-slate-700 rounded-xl grid grid-cols-2 md:grid-cols-4 items-center gap-1">
+        <div className="p-1 bg-slate-800/70 border border-slate-700 rounded-xl grid grid-cols-2 md:grid-cols-5 items-center gap-1">
             <button
                 onClick={() => setMode(AppMode.DESCRIPTION)}
                 className={getButtonClass(AppMode.DESCRIPTION)}
@@ -37,11 +37,17 @@ const ModeSwitcher: React.FC<ModeSwitcherProps> = ({ mode, setMode }) => {
             >
                 {t('modeSwitcher.mediaArt')}
             </button>
-             <button
+            <button
                 onClick={() => setMode(AppMode.VISUAL_ART)}
                 className={getButtonClass(AppMode.VISUAL_ART)}
             >
                 {t('modeSwitcher.visualArt')}
+            </button>
+            <button
+                onClick={() => setMode(AppMode.CHARACTER)}
+                className={getButtonClass(AppMode.CHARACTER)}
+            >
+                {t('modeSwitcher.character')}
             </button>
         </div>
     );

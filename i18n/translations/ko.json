@@ -21,7 +21,8 @@
     "productDescription": "제품 설명",
     "storyboard": "스토리보드 생성기",
     "mediaArt": "미디어 아트 생성기",
-    "visualArt": "비주얼 아트 생성기"
+    "visualArt": "비주얼 아트 생성기",
+    "character": "캐릭터 생성기"
   },
   "inputForm": {
     "productName": "제품명",

@@ -6,6 +6,7 @@ export enum AppMode {
     STORYBOARD = 'STORYBOARD',
     MEDIA_ART = 'MEDIA_ART',
     VISUAL_ART = 'VISUAL_ART',
+    CHARACTER = 'CHARACTER',
 }
 
 export enum Tone {

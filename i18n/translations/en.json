@@ -21,7 +21,8 @@
     "productDescription": "Product Description",
     "storyboard": "Storyboard Generator",
     "mediaArt": "Media Art Generator",
-    "visualArt": "Visual Art Generator"
+    "visualArt": "Visual Art Generator",
+    "character": "Character Creator"
   },
   "inputForm": {
     "productName": "Product Name",

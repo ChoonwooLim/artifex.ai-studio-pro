@@ -11,6 +11,7 @@ import ApiKeyInstructions from './components/ApiKeyInstructions';
 
 // Lazy loaded components for better performance
 const StoryboardInputForm = lazy(() => import('./components/StoryboardInputForm'));
+const CharacterCreator = lazy(() => import('./components/CharacterCreator'));
 const StoryboardDisplay = lazy(() => import('./components/StoryboardDisplay'));
 const DetailedStoryboardModal = lazy(() => import('./components/DetailedStoryboardModal'));
 const SampleGalleryModal = lazy(() => import('./components/SampleGalleryModal'));
@@ -886,6 +887,18 @@ const App: React.FC = () => {
                                         state={visualArtState}
                                         setState={setVisualArtState}
                                         onGenerate={handleGenerateVisualArt}
+                                    />
+                                </Suspense>
+                            </div>
+                         )}
+                         
+                         {mode === AppMode.CHARACTER && (
+                            <div className="w-full">
+                                <Suspense fallback={<LoadingFallback />}>
+                                    <CharacterCreator
+                                        onGenerateCharacterImage={handleGenerateCharacterImage}
+                                        apiKeys={apiKeys}
+                                        onUpdateApiKey={handleApiKeyChange}
                                     />
                                 </Suspense>
                             </div>
