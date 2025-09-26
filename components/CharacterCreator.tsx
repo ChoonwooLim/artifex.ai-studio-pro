@@ -26,7 +26,7 @@ import { useTranslation } from '../i18n/LanguageContext';
 import CharacterManager from './character/CharacterManager';
 import { CharacterPresetSelector } from './character/CharacterPresetSelector';
 import { CHARACTER_PRESETS, generatePromptFromPresets } from '../data/characterPresets';
-import geminiService from '../services/geminiService';
+import * as geminiService from '../services/geminiService';
 
 interface CharacterCreatorProps {
     onGenerateCharacterImage?: (character: Character) => Promise<string>;
@@ -156,7 +156,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             setSelectedCharacter(updatedCharacter);
         } catch (error) {
             console.error('Failed to generate image:', error);
-            alert('이미지 생성 실패: ' + (error as Error).message);
+            alert(t('characterCreator.imageGenerationFailed') + ': ' + (error as Error).message);
         } finally {
             setIsGenerating(false);
         }
@@ -189,7 +189,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 setCharacters([...characters, character]);
                 setSelectedCharacter(character);
             } catch (error) {
-                alert('캐릭터 파일을 읽을 수 없습니다.');
+                alert(t('characterCreator.cannotReadCharacterFile'));
             }
         };
         reader.readAsText(file);
@@ -289,9 +289,9 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                         <div className="flex items-center space-x-4">
                             <Users className="w-8 h-8 text-purple-400" />
                             <div>
-                                <h1 className="text-2xl font-bold text-white">캐릭터 생성기</h1>
+                                <h1 className="text-2xl font-bold text-white">{t('characterCreator.title')}</h1>
                                 <p className="text-sm text-gray-400 mt-1">
-                                    AI 기반 캐릭터 디자인 및 레퍼런스 생성
+                                    {t('characterCreator.description')}
                                 </p>
                             </div>
                         </div>
@@ -300,7 +300,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                             <button
                                 onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
                                 className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-                                title="뷰 모드 변경"
+                                title={t('characterCreator.changeViewMode')}
                             >
                                 {viewMode === 'grid' ? <List className="w-5 h-5" /> : <Grid className="w-5 h-5" />}
                             </button>
@@ -308,7 +308,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-                                title="캐릭터 가져오기"
+                                title={t('characterCreator.importCharacter')}
                             >
                                 <Upload className="w-5 h-5" />
                             </button>
@@ -326,7 +326,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                 className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
                             >
                                 <Plus className="w-5 h-5" />
-                                <span>새 캐릭터</span>
+                                <span>{t('characterCreator.newCharacter')}</span>
                             </button>
                         </div>
                     </div>
@@ -342,13 +342,13 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                         {isCreatingNew && (
                             <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-semibold text-white">새 캐릭터 만들기</h3>
+                                    <h3 className="text-lg font-semibold text-white">{t('characterCreator.createNewCharacter')}</h3>
                                     <button
                                         onClick={() => setShowPresetSelector(!showPresetSelector)}
                                         className="px-3 py-1 bg-purple-600 rounded hover:bg-purple-700 transition-colors flex items-center space-x-1"
                                     >
                                         <Sparkles className="w-4 h-4" />
-                                        <span className="text-sm">프리셋</span>
+                                        <span className="text-sm">{t('characterCreator.presets')}</span>
                                     </button>
                                 </div>
 
@@ -364,85 +364,85 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            캐릭터 이름 *
+                                            {t('characterCreator.characterName')} *
                                         </label>
                                         <input
                                             type="text"
                                             value={newCharacter.name}
                                             onChange={(e) => setNewCharacter({ ...newCharacter, name: e.target.value })}
                                             className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                            placeholder="예: 김철수, Sarah"
+                                            placeholder={t('characterCreator.namePlaceholder')}
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            역할
+                                            {t('characterCreator.role')}
                                         </label>
                                         <select
                                             value={newCharacter.role}
                                             onChange={(e) => setNewCharacter({ ...newCharacter, role: e.target.value as Character['role'] })}
                                             className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
                                         >
-                                            <option value="protagonist">주인공</option>
-                                            <option value="supporting">조연</option>
-                                            <option value="extra">엑스트라</option>
+                                            <option value="protagonist">{t('characterCreator.protagonist')}</option>
+                                            <option value="supporting">{t('characterCreator.supporting')}</option>
+                                            <option value="extra">{t('characterCreator.extra')}</option>
                                         </select>
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            캐릭터 스타일
+                                            {t('characterCreator.characterStyle')}
                                         </label>
                                         <select
                                             value={newCharacter.characterStyle}
                                             onChange={(e) => setNewCharacter({ ...newCharacter, characterStyle: e.target.value as any })}
                                             className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
                                         >
-                                            <option value="cinematic">영화 (Cinematic)</option>
-                                            <option value="photorealistic">실사 (Photorealistic)</option>
-                                            <option value="animation">애니메이션 (Animation)</option>
-                                            <option value="anime">애니메 (Anime)</option>
-                                            <option value="concept-art">컨셉 아트 (Concept Art)</option>
+                                            <option value="cinematic">{t('characterCreator.styleCinematic')}</option>
+                                            <option value="photorealistic">{t('characterCreator.stylePhotorealistic')}</option>
+                                            <option value="animation">{t('characterCreator.styleAnimation')}</option>
+                                            <option value="anime">{t('characterCreator.styleAnime')}</option>
+                                            <option value="concept-art">{t('characterCreator.styleConceptArt')}</option>
                                         </select>
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            외모 설명 *
+                                            {t('characterCreator.physicalDescription')} *
                                         </label>
                                         <textarea
                                             value={newCharacter.physicalDescription}
                                             onChange={(e) => setNewCharacter({ ...newCharacter, physicalDescription: e.target.value })}
                                             className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
                                             rows={3}
-                                            placeholder="프리셋을 선택하거나 직접 입력..."
+                                            placeholder={t('characterCreator.physicalDescriptionPlaceholder')}
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            의상 설명
+                                            {t('characterCreator.clothingDescription')}
                                         </label>
                                         <textarea
                                             value={newCharacter.clothingDescription}
                                             onChange={(e) => setNewCharacter({ ...newCharacter, clothingDescription: e.target.value })}
                                             className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
                                             rows={2}
-                                            placeholder="예: 검은 정장, 흰 셔츠"
+                                            placeholder={t('characterCreator.clothingPlaceholder')}
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            성격 특징
+                                            {t('characterCreator.personalityTraits')}
                                         </label>
                                         <textarea
                                             value={newCharacter.personalityTraits}
                                             onChange={(e) => setNewCharacter({ ...newCharacter, personalityTraits: e.target.value })}
                                             className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
                                             rows={2}
-                                            placeholder="예: 차분하고 분석적"
+                                            placeholder={t('characterCreator.personalityPlaceholder')}
                                         />
                                     </div>
 
@@ -451,14 +451,14 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                             onClick={() => setIsCreatingNew(false)}
                                             className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
                                         >
-                                            취소
+                                            {t('characterCreator.cancel')}
                                         </button>
                                         <button
                                             onClick={handleAddCharacter}
                                             disabled={!newCharacter.name || !newCharacter.physicalDescription}
                                             className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
                                         >
-                                            생성
+                                            {t('characterCreator.create')}
                                         </button>
                                     </div>
                                 </div>
@@ -467,12 +467,12 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
                         {/* Character List */}
                         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                            <h3 className="text-lg font-semibold text-white mb-4">캐릭터 목록</h3>
+                            <h3 className="text-lg font-semibold text-white mb-4">{t('characterCreator.characterList')}</h3>
                             
                             {characters.length === 0 ? (
                                 <div className="text-center py-8 text-gray-400">
                                     <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                    <p>아직 생성된 캐릭터가 없습니다</p>
+                                    <p>{t('characterCreator.noCharactersYet')}</p>
                                 </div>
                             ) : (
                                 <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-2'}>
@@ -530,7 +530,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                         <button
                                             onClick={() => setShowPresetSelector(!showPresetSelector)}
                                             className="p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors"
-                                            title="프리셋 적용"
+                                            title={t('characterCreator.applyPresets')}
                                         >
                                             <Sparkles className="w-5 h-5" />
                                         </button>
@@ -538,7 +538,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                         <button
                                             onClick={handleExportCharacter}
                                             className="p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors"
-                                            title="캐릭터 내보내기"
+                                            title={t('characterCreator.exportCharacter')}
                                         >
                                             <Download className="w-5 h-5" />
                                         </button>
@@ -558,7 +558,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            외모 설명
+                                            {t('characterCreator.physicalDescription')}
                                         </label>
                                         <textarea
                                             value={selectedCharacter.physicalDescription}
@@ -574,7 +574,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            의상 설명
+                                            {t('characterCreator.clothingDescription')}
                                         </label>
                                         <textarea
                                             value={selectedCharacter.clothingDescription}
@@ -591,7 +591,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
                                 {/* Image Generation Controls */}
                                 <div className="mb-6">
-                                    <h3 className="text-lg font-semibold text-white mb-4">이미지 생성</h3>
+                                    <h3 className="text-lg font-semibold text-white mb-4">{t('characterCreator.imageGeneration')}</h3>
                                     
                                     <div className="flex flex-wrap gap-2 mb-4">
                                         <button
@@ -600,7 +600,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                             className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 disabled:bg-gray-600 transition-colors flex items-center space-x-2"
                                         >
                                             <Camera className="w-4 h-4" />
-                                            <span>전신 레퍼런스</span>
+                                            <span>{t('characterCreator.fullBodyReference')}</span>
                                         </button>
                                         
                                         <button
@@ -609,7 +609,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                             className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 transition-colors flex items-center space-x-2"
                                         >
                                             <Camera className="w-4 h-4" />
-                                            <span>헤드샷</span>
+                                            <span>{t('characterCreator.headshot')}</span>
                                         </button>
                                         
                                         <div className="flex-1 flex space-x-2">
@@ -617,7 +617,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                                 type="text"
                                                 value={customPrompt}
                                                 onChange={(e) => setCustomPrompt(e.target.value)}
-                                                placeholder="커스텀 프롬프트..."
+                                                placeholder={t('characterCreator.customPromptPlaceholder')}
                                                 className="flex-1 bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
                                             />
                                             <button
@@ -625,7 +625,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                                 disabled={isGenerating || !customPrompt}
                                                 className="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-600 transition-colors"
                                             >
-                                                생성
+                                                {t('characterCreator.generate')}
                                             </button>
                                         </div>
                                     </div>
@@ -633,7 +633,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     {isGenerating && (
                                         <div className="text-center py-4">
                                             <RefreshCw className="w-8 h-8 animate-spin mx-auto text-purple-400" />
-                                            <p className="text-gray-400 mt-2">이미지 생성 중...</p>
+                                            <p className="text-gray-400 mt-2">{t('characterCreator.generatingImage')}</p>
                                         </div>
                                     )}
                                 </div>
@@ -642,7 +642,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                 <div className="space-y-4">
                                     {selectedCharacter.fullBodyReference && (
                                         <div>
-                                            <h4 className="text-sm font-medium text-gray-300 mb-2">전신 레퍼런스</h4>
+                                            <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.fullBodyReference')}</h4>
                                             <img 
                                                 src={selectedCharacter.fullBodyReference} 
                                                 alt="Full Body Reference"
@@ -653,7 +653,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
                                     {selectedCharacter.headShotReference && (
                                         <div>
-                                            <h4 className="text-sm font-medium text-gray-300 mb-2">헤드샷</h4>
+                                            <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.headshot')}</h4>
                                             <img 
                                                 src={selectedCharacter.headShotReference} 
                                                 alt="Headshot Reference"
@@ -664,7 +664,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
                                     {selectedCharacter.generatedImages && selectedCharacter.generatedImages.length > 0 && (
                                         <div>
-                                            <h4 className="text-sm font-medium text-gray-300 mb-2">추가 생성 이미지</h4>
+                                            <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.additionalGeneratedImages')}</h4>
                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                                 {selectedCharacter.generatedImages.map((img, idx) => (
                                                     <img 
@@ -682,7 +682,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                         ) : (
                             <div className="bg-gray-800 rounded-lg p-12 border border-gray-700 text-center">
                                 <Users className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                                <p className="text-gray-400 text-lg">캐릭터를 선택하거나 새로 만들어주세요</p>
+                                <p className="text-gray-400 text-lg">{t('characterCreator.selectOrCreateCharacter')}</p>
                             </div>
                         )}
                     </div>
