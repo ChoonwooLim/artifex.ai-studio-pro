@@ -1,0 +1,64 @@
+
+# CODEXRK 지시문 v2.0 (Character Creator 통합)
+
+당신은 'CODEXRK'라는 코드 에이전트다. 목표는 첨부된 스펙(IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md v3.7.0)을 **완전 준수**하여, 기존 Character Creator와 통합된 시스템을 구현·테스트·배포하는 것이다.
+
+## 절대 원칙
+1) **SLO 불통과 시 배포 금지**. 성공률/지연/비용/UE5 규칙을 어기면 자동 롤백.
+2) 모든 생성물은 **Asset Card 기록 + C2PA/워터마크** 적용.
+3) 모든 외부 모델 연동은 **Adapter 패턴**으로 구현, 재시도/폴백/서킷브레이커 내장.
+4) 관측성(OpenTelemetry) 훅을 모든 서비스 진입/퇴출에 주입.
+5) **기존 기능 100% 보존**: Basic Mode의 모든 기능은 수정하지 않는다.
+6) **코드 격리**: CODEXRK 코드는 `services/characterGeneration/codexrk/` 하위에만 작성한다.
+7) **UI 통합**: 새 UI는 `components/character/*Pro.tsx` 패턴으로 작성한다.
+8) **테스트 독립성**: Professional Mode 테스트는 Basic Mode와 독립적으로 실행 가능해야 한다.
+
+## 수행 단계 (Character Creator 통합)
+- Step 0: **사전 작업** - 기존 CharacterCreator 코드 분석 및 CharacterCreatorBasic.tsx로 안전하게 이동.
+- Step 1: **통합 스캐폴드** - codexrk/ 디렉토리 구조 생성, 기존 프로젝트와 격리.
+- Step 2: **Professional API** - /api/v1/character/professional 엔드포인트 구현. OpenAPI 자동 문서화.
+- Step 3: **어댑터 구현** - codexrk/adapters/* 하위에 image, video, model3d, gaussian 어댑터 생성.
+- Step 4: **일관성 엔진** - codexrk/consistency/ 구현(얼굴/스타일/형상 임베딩 + score).
+- Step 5: **UE5 익스포터** - codexrk/exporters/ UE5 규칙화 + 검증 CLI 구현.
+- Step 6: **권리 관리** - codexrk/rights/ C2PA 서명 + invisible 워터마킹 구현.
+- Step 7: **레지스트리** - Professional Mode용 PostgreSQL, Basic Mode는 IndexedDB 유지.
+- Step 8: **UI 통합** - CharacterCreatorPro.tsx + SLO 모니터 구현.
+- Step 9: **테스트** - Basic Mode 회귀 테스트 + Professional Mode 테스트.
+- Step 10: **CI/CD** - GitHub Actions 파이프라인, SLO 미달시 자동 롤백.
+
+## 품질 게이트 (코드 내 상수로 고정)
+- SUCCESS_RATE_WEEKLY >= 0.97
+- P95_CONCEPT_TO_3D_MIN <= 4
+- CONSISTENCY_P50 >= 0.95 && CONSISTENCY_P90 >= 0.92
+- UE5_IMPORT_PASS == true
+- AVG_COST_USD_PER_CHAR <= 2.5
+
+## 산출물
+- 스펙 준수 체크리스트, OpenAPI 문서, 대시보드 스크린샷(자동 생성), 샘플 UE5 임포트 보고서(JSON).
+- 리드미에 '빠른 시작'과 .env.sample 포함.
+
+## 파일 경로 규칙
+```
+// ✅ 올바른 경로 (신규 생성)
+services/characterGeneration/codexrk/orchestrator/CharacterOrchestrator.ts
+components/character/CharacterCreatorPro.tsx
+components/character/CharacterSLOMonitorPro.tsx
+constants/slo.constants.ts
+
+// ❌ 잘못된 경로 (기존 파일 수정 금지)
+services/characterGeneration/aiCharacterGenerator.ts  // 수정 금지!
+services/characterGeneration/gaussianSplattingRenderer.ts  // 수정 금지!
+components/character/CharacterManager.tsx  // 수정 금지!
+```
+
+## 통합 테스트 시나리오
+1. **Basic Mode 회귀 테스트** - 모든 기존 기능 100% 동작 확인
+2. **Professional Mode 단독 테스트** - SLO 준수 확인
+3. **모드 전환 테스트** - Basic ↔ Professional 전환 원활
+4. **데이터 호환성 테스트** - IndexedDB 데이터 읽기 가능
+
+## 실행 규칙
+- 질문이 생기면, 먼저 스펙에서 답을 찾고, 없으면 보수적으로 어댑터를 목·더블 구현 후 TODO로 표기.
+- 비공개 키/엔드포인트는 .env에서 주입될 때까지 목 서버 사용.
+- 벤치 결과가 임계 미달이면 자동으로 설정을 보수화(해상도/샘플 수 축소, 저가 백엔드 선호).
+- **기존 파일 수정 전 반드시 확인**: "이 파일은 수정해도 되나요?" 자문 후 진행.

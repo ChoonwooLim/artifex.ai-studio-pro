@@ -24,6 +24,78 @@
     "visualArt": "비주얼 아트 생성기",
     "character": "캐릭터 생성기"
   },
+  "characterCreator": {
+    "title": "캐릭터 생성기",
+    "description": "AI로 캐릭터를 디자인하고 레퍼런스 이미지를 생성하세요.",
+    "changeViewMode": "보기 모드 전환",
+    "importCharacter": "캐릭터 가져오기",
+    "newCharacter": "새 캐릭터",
+    "createNewCharacter": "새 캐릭터 만들기",
+    "presets": "프리셋",
+    "characterName": "캐릭터 이름",
+    "namePlaceholder": "예: 김철수, Sarah",
+    "role": "역할",
+    "protagonist": "주인공",
+    "supporting": "조연",
+    "extra": "엑스트라",
+    "characterStyle": "캐릭터 스타일",
+    "styleCinematic": "시네마틱",
+    "stylePhotorealistic": "포토리얼",
+    "styleAnimation": "애니메이션",
+    "styleAnime": "애니메",
+    "styleConceptArt": "컨셉 아트",
+    "physicalDescription": "외형 설명",
+    "physicalDescriptionPlaceholder": "외모, 체형, 주요 특징을 작성하세요...",
+    "clothingDescription": "의상 설명",
+    "clothingPlaceholder": "의상 디테일을 작성하세요...",
+    "personalityTraits": "성격 특징",
+    "personalityPlaceholder": "성격이나 태도를 작성하세요...",
+    "cancel": "취소",
+    "create": "생성",
+    "characterList": "캐릭터 목록",
+    "noCharactersYet": "등록된 캐릭터가 없습니다",
+    "applyPresets": "프리셋 적용",
+    "exportCharacter": "캐릭터 내보내기",
+    "imageGeneration": "이미지 생성",
+    "fullBodyReference": "전신 레퍼런스",
+    "headshot": "헤드샷",
+    "customPromptPlaceholder": "커스텀 프롬프트를 입력하세요...",
+    "generate": "생성",
+    "generatingImage": "이미지를 생성하는 중...",
+    "additionalGeneratedImages": "추가 생성 이미지",
+    "selectOrCreateCharacter": "시작하려면 캐릭터를 선택하거나 만드세요.",
+    "imageGenerationFailed": "이미지 생성에 실패했습니다",
+    "aiGenerationFailed": "AI 캐릭터 생성에 실패했습니다",
+    "cannotReadCharacterFile": "캐릭터 파일을 읽을 수 없습니다"
+  },
+  "characterPresets": {
+    "title": "캐릭터 프리셋 선택기",
+    "selectedCount": "{{count}}개 선택됨",
+    "preview": "미리보기",
+    "clearAll": "모두 초기화",
+    "searchPlaceholder": "프리셋 검색...",
+    "generatePrompt": "프롬프트 생성",
+    "previewTitle": "선택한 프리셋 미리보기",
+    "generatedPrompt": "생성된 프롬프트:",
+    "close": "닫기",
+    "applyPrompt": "프롬프트 적용",
+    "contextNew": "새 캐릭터 설정",
+    "contextExisting": "{{name}} 업데이트 중",
+    "contextExistingFallback": "선택된 캐릭터",
+    "noSelectionHint": "아직 선택한 프리셋이 없습니다. 카테고리를 선택해 시작하세요.",
+    "noResults": "\"{{term}}\"에 해당하는 프리셋이 없습니다.",
+    "promptHint": "프리셋으로 설명을 보강하거나 AI 프롬프트를 빠르게 구성하세요.",
+    "categories": {
+      "bodyType": "체형",
+      "faceShape": "얼굴형",
+      "ageRange": "연령대",
+      "hairStyle": "헤어스타일",
+      "clothingStyle": "의상 스타일",
+      "personality": "성격 특성",
+      "accessories": "액세서리",
+      "specialFeatures": "특징"
+    }
+  },
   "inputForm": {
     "productName": "제품명",
     "productNamePlaceholder": "예: 네뷸라 스마트 프로젝터",
@@ -74,6 +146,7 @@
     "scene": "장면 #{{index}}",
     "generatingImage": "이미지 생성 중...",
     "imageError": "이미지 생성에 실패했습니다.",
+    "aiGenerationFailed": "AI 캐릭터 생성에 실패했습니다.",
     "quotaErrorTitle": "할당량 도달",
     "checkPlan": "플랜을 확인하거나 나중에 다시 시도해주세요.",
     "generatingClip": "클립 생성 중...",
@@ -273,36 +346,126 @@
     "exportAll": "모두 내보내기"
   },
   "paintings": {
-    "starryNight": { "title": "별이 빛나는 밤", "artist": "빈센트 반 고흐" },
-    "greatWave": { "title": "가나가와 해변의 높은 파도 아래", "artist": "호쿠사이" },
-    "pearlEarring": { "title": "진주 귀걸이를 한 소녀", "artist": "요하네스 페르메이르" },
-    "monaLisa": { "title": "모나리자", "artist": "레오나르도 다 빈치" },
-    "wandererSeaFog": { "title": "안개 바다 위의 방랑자", "artist": "카스파르 다비트 프리드리히" },
-    "birthOfVenus": { "title": "비너스의 탄생", "artist": "산드로 보티첼리" },
-    "theScream": { "title": "절규", "artist": "에드바르 뭉크" },
-    "americanGothic": { "title": "아메리칸 고딕", "artist": "그랜트 우드" },
-    "theNightWatch": { "title": "야경", "artist": "렘브란트 판 레인" },
-    "luncheonBoatingParty": { "title": "뱃놀이하는 사람들의 점심", "artist": "피에르 오귀스트 르누아르" },
-    "persistenceOfMemory": { "title": "기억의 지속", "artist": "살바도르 달리" },
-    "theKiss": { "title": "키스", "artist": "구스타프 클림트" },
-    "arnolfiniPortrait": { "title": "아르놀피니 부부의 초상", "artist": "얀 반 에이크" },
-    "gardenOfEarthlyDelights": { "title": "세속적인 쾌락의 동산", "artist": "히에로니무스 보스" },
-    "aSundayAfternoon": { "title": "그랑드 자트 섬의 일요일 오후", "artist": "조르주 쇠라" },
-    "theFightingTemeraire": { "title": "전함 테메레르", "artist": "J. M. W. 터너" },
-    "libertyLeadingThePeople": { "title": "민중을 이끄는 자유의 여신", "artist": "외젠 들라크루아" },
-    "lasMeninas": { "title": "시녀들", "artist": "디에고 벨라스케스" },
-    "theSchoolOfAthens": { "title": "아테네 학당", "artist": "라파엘로" },
-    "nighthawks": { "title": "밤을 지새우는 사람들", "artist": "에드워드 호퍼" },
-    "creationOfAdam": { "title": "아담의 창조", "artist": "미켈란젤로" },
-    "whistlersMother": { "title": "휘슬러의 어머니", "artist": "제임스 애벗 맥닐 휘슬러" },
-    "impressionSunrise": { "title": "인상, 해돋이", "artist": "클로드 모네" },
-    "theSwing": { "title": "그네", "artist": "장 오노레 프라고나르" },
-    "saturnDevouringHisSon": { "title": "아들을 잡아먹는 사투르누스", "artist": "프란시스코 고야" },
-    "anatomyLesson": { "title": "니콜라스 튈프 박사의 해부학 강의", "artist": "렘브란트 판 레인" },
-    "towerOfBabel": { "title": "바벨탑", "artist": "피터르 브뤼헐 더 아우더" },
-    "sleepingGypsy": { "title": "잠자는 집시", "artist": "앙리 루소" },
-    "bacchus": { "title": "바쿠스", "artist": "카라바조" },
-    "thirdOfMay": { "title": "1808년 5월 3일", "artist": "프란시스코 고야" }
+    "starryNight": {
+      "title": "별이 빛나는 밤",
+      "artist": "빈센트 반 고흐"
+    },
+    "greatWave": {
+      "title": "가나가와 해변의 높은 파도 아래",
+      "artist": "호쿠사이"
+    },
+    "pearlEarring": {
+      "title": "진주 귀걸이를 한 소녀",
+      "artist": "요하네스 페르메이르"
+    },
+    "monaLisa": {
+      "title": "모나리자",
+      "artist": "레오나르도 다 빈치"
+    },
+    "wandererSeaFog": {
+      "title": "안개 바다 위의 방랑자",
+      "artist": "카스파르 다비트 프리드리히"
+    },
+    "birthOfVenus": {
+      "title": "비너스의 탄생",
+      "artist": "산드로 보티첼리"
+    },
+    "theScream": {
+      "title": "절규",
+      "artist": "에드바르 뭉크"
+    },
+    "americanGothic": {
+      "title": "아메리칸 고딕",
+      "artist": "그랜트 우드"
+    },
+    "theNightWatch": {
+      "title": "야경",
+      "artist": "렘브란트 판 레인"
+    },
+    "luncheonBoatingParty": {
+      "title": "뱃놀이하는 사람들의 점심",
+      "artist": "피에르 오귀스트 르누아르"
+    },
+    "persistenceOfMemory": {
+      "title": "기억의 지속",
+      "artist": "살바도르 달리"
+    },
+    "theKiss": {
+      "title": "키스",
+      "artist": "구스타프 클림트"
+    },
+    "arnolfiniPortrait": {
+      "title": "아르놀피니 부부의 초상",
+      "artist": "얀 반 에이크"
+    },
+    "gardenOfEarthlyDelights": {
+      "title": "세속적인 쾌락의 동산",
+      "artist": "히에로니무스 보스"
+    },
+    "aSundayAfternoon": {
+      "title": "그랑드 자트 섬의 일요일 오후",
+      "artist": "조르주 쇠라"
+    },
+    "theFightingTemeraire": {
+      "title": "전함 테메레르",
+      "artist": "J. M. W. 터너"
+    },
+    "libertyLeadingThePeople": {
+      "title": "민중을 이끄는 자유의 여신",
+      "artist": "외젠 들라크루아"
+    },
+    "lasMeninas": {
+      "title": "시녀들",
+      "artist": "디에고 벨라스케스"
+    },
+    "theSchoolOfAthens": {
+      "title": "아테네 학당",
+      "artist": "라파엘로"
+    },
+    "nighthawks": {
+      "title": "밤을 지새우는 사람들",
+      "artist": "에드워드 호퍼"
+    },
+    "creationOfAdam": {
+      "title": "아담의 창조",
+      "artist": "미켈란젤로"
+    },
+    "whistlersMother": {
+      "title": "휘슬러의 어머니",
+      "artist": "제임스 애벗 맥닐 휘슬러"
+    },
+    "impressionSunrise": {
+      "title": "인상, 해돋이",
+      "artist": "클로드 모네"
+    },
+    "theSwing": {
+      "title": "그네",
+      "artist": "장 오노레 프라고나르"
+    },
+    "saturnDevouringHisSon": {
+      "title": "아들을 잡아먹는 사투르누스",
+      "artist": "프란시스코 고야"
+    },
+    "anatomyLesson": {
+      "title": "니콜라스 튈프 박사의 해부학 강의",
+      "artist": "렘브란트 판 레인"
+    },
+    "towerOfBabel": {
+      "title": "바벨탑",
+      "artist": "피터르 브뤼헐 더 아우더"
+    },
+    "sleepingGypsy": {
+      "title": "잠자는 집시",
+      "artist": "앙리 루소"
+    },
+    "bacchus": {
+      "title": "바쿠스",
+      "artist": "카라바조"
+    },
+    "thirdOfMay": {
+      "title": "1808년 5월 3일",
+      "artist": "프란시스코 고야"
+    }
   },
   "errors": {
     "descriptionGeneration": "설명 생성에 실패했습니다. 다시 시도해주세요.",

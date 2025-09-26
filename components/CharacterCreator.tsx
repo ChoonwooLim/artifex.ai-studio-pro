@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { 
-    Users, 
-    Sparkles, 
-    Camera, 
-    Download, 
-    Upload, 
+import {
+    Users,
+    Sparkles,
+    Camera,
+    Download,
+    Upload,
     Save,
     Image,
     Palette,
@@ -19,14 +19,21 @@ import {
     ChevronRight,
     ChevronDown,
     Check,
-    X
+    X,
+    Box,
+    Video,
+    User,
+    Zap,
+    Shield
 } from 'lucide-react';
 import { Character } from '../types';
 import { useTranslation } from '../i18n/LanguageContext';
 import CharacterManager from './character/CharacterManager';
-import { CharacterPresetSelector } from './character/CharacterPresetSelector';
+import CharacterPresetModal from './character/CharacterPresetModal';
 import { CHARACTER_PRESETS, generatePromptFromPresets } from '../data/characterPresets';
 import * as geminiService from '../services/geminiService';
+import { AICharacterGenerator, Character2DGenerationOptions, Character3DGenerationOptions, DigitalHumanOptions } from '../services/characterGeneration/aiCharacterGenerator';
+import { GaussianSplattingRenderer } from '../services/characterGeneration/gaussianSplattingRenderer';
 
 interface CharacterCreatorProps {
     onGenerateCharacterImage?: (character: Character) => Promise<string>;
@@ -40,6 +47,22 @@ interface CharacterWithExtras extends Character {
     headShotReference?: string;
     poseReferences?: string[];
     generatedImages?: string[];
+    // AI Generation features
+    characterDNA?: any;
+    model3D?: {
+        url: string;
+        format: string;
+        preview: string;
+    };
+    video?: {
+        url: string;
+        thumbnail: string;
+    };
+    digitalHuman?: {
+        avatarId: string;
+        previewUrl: string;
+    };
+    blockchainTx?: string;
 }
 
 const CharacterCreator: React.FC<CharacterCreatorProps> = ({ 
@@ -51,13 +74,43 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     const [characters, setCharacters] = useState<CharacterWithExtras[]>([]);
     const [selectedCharacter, setSelectedCharacter] = useState<CharacterWithExtras | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
-    const [showPresetSelector, setShowPresetSelector] = useState(false);
+    const [presetModalState, setPresetModalState] = useState<{ isOpen: boolean; target: 'new' | 'existing' }>({ isOpen: false, target: 'new' });
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationType, setGenerationType] = useState<'fullbody' | 'headshot' | 'custom'>('fullbody');
     const [customPrompt, setCustomPrompt] = useState('');
-    const [selectedPresets, setSelectedPresets] = useState<Record<string, string[]>>({});
-    
+    const [aiGenerator, setAiGenerator] = useState<AICharacterGenerator | null>(null);
+    const [rendererContainer, setRendererContainer] = useState<HTMLDivElement | null>(null);
+    const [gaussianRenderer, setGaussianRenderer] = useState<GaussianSplattingRenderer | null>(null);
+    const [generation2DOptions, setGeneration2DOptions] = useState<Character2DGenerationOptions>({
+        model: 'midjourney-v7',
+        style: 'cinematic',
+        quality: 'standard',
+        aspectRatio: '16:9',
+        variations: 4,
+        video: false
+    });
+    const [generation3DOptions, setGeneration3DOptions] = useState<Character3DGenerationOptions>({
+        model: 'csm-ai',
+        quality: 'standard',
+        format: 'glb',
+        topology: 'auto',
+        textureResolution: '4k',
+        rigging: true,
+        animations: ['idle', 'walk', 'run']
+    });
+    const [digitalHumanOptions, setDigitalHumanOptions] = useState<DigitalHumanOptions>({
+        provider: 'did-agents-2',
+        voice: 'en-US-Neural',
+        language: 'en',
+        emotions: ['happy', 'sad', 'surprised', 'neutral'],
+        gestures: true,
+        lipSync: true,
+        realTimeConversation: false
+    });
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState('');
+
     const [newCharacter, setNewCharacter] = useState<Partial<CharacterWithExtras>>({
         name: '',
         role: 'supporting',
@@ -68,6 +121,40 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const openPresetModal = useCallback((target: 'new' | 'existing') => {
+        setPresetModalState({ isOpen: true, target });
+    }, []);
+
+    // Initialize AI Generator
+    React.useEffect(() => {
+        if (apiKeys) {
+            const generator = new AICharacterGenerator(apiKeys);
+            setAiGenerator(generator);
+        }
+    }, [apiKeys]);
+
+    // Initialize Gaussian Splatting Renderer
+    React.useEffect(() => {
+        if (rendererContainer && !gaussianRenderer) {
+            const renderer = new GaussianSplattingRenderer(rendererContainer, {
+                resolution: '4k',
+                targetFPS: 120,
+                quality: 'ultra',
+                enablePostProcessing: true
+            });
+            setGaussianRenderer(renderer);
+        }
+
+        return () => {
+            if (gaussianRenderer) {
+                gaussianRenderer.destroy();
+            }
+        };
+    }, [rendererContainer]);
+
+    const closePresetModal = useCallback(() => {
+        setPresetModalState(prev => ({ ...prev, isOpen: false }));
+    }, []);
 
     // Character CRUD operations
     const handleAddCharacter = useCallback(() => {
@@ -95,7 +182,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 characterStyle: 'cinematic'
             });
             setIsCreatingNew(false);
-            setShowPresetSelector(false);
+            closePresetModal();
         }
     }, [newCharacter, characters]);
 
@@ -113,7 +200,71 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
         }
     }, [characters, selectedCharacter]);
 
-    // Image generation
+    // AI-powered 2D/3D generation
+    const handleGenerateAICharacter = useCallback(async () => {
+        if (!selectedCharacter || !aiGenerator) return;
+
+        setIsGeneratingAI(true);
+        setGenerationProgress('Initializing AI generation...');
+
+        try {
+            // Build comprehensive description from character data
+            const fullDescription = `
+                ${selectedCharacter.name}: ${selectedCharacter.physicalDescription}.
+                Clothing: ${selectedCharacter.clothingDescription}.
+                Personality: ${selectedCharacter.personalityTraits}.
+                Role: ${selectedCharacter.role} character.
+            `.trim();
+
+            setGenerationProgress('Generating Character DNA...');
+
+            // Generate complete character with AI
+            const result = await aiGenerator.generateCharacterFromText(fullDescription, {
+                generate2D: generation2DOptions,
+                generate3D: generation3DOptions,
+                generateDigitalHuman: digitalHumanOptions.provider !== 'none' ? digitalHumanOptions : undefined,
+                registerOnBlockchain: false // Can be enabled via settings
+            });
+
+            setGenerationProgress('Processing results...');
+
+            // Update character with AI-generated assets
+            const updatedCharacter: CharacterWithExtras = {
+                ...selectedCharacter,
+                characterDNA: result.characterDNA,
+                fullBodyReference: result.images2D?.url,
+                generatedImages: result.images2D?.variations || [],
+                model3D: result.model3D ? {
+                    url: result.model3D.url,
+                    format: result.model3D.format,
+                    preview: result.model3D.preview
+                } : undefined,
+                video: result.video,
+                digitalHuman: result.digitalHuman,
+                blockchainTx: result.characterDNA.metadata.blockchainTx
+            };
+
+            handleUpdateCharacter(updatedCharacter);
+            setSelectedCharacter(updatedCharacter);
+
+            // Load 3D model in Gaussian renderer if available
+            if (result.model3D?.gaussianSplat && gaussianRenderer) {
+                await gaussianRenderer.loadGaussianSplat(result.model3D.gaussianSplat.url, selectedCharacter.id);
+            } else if (result.model3D && gaussianRenderer) {
+                await gaussianRenderer.loadModel(result.model3D.url, result.model3D.format as any);
+            }
+
+            setGenerationProgress(`✅ Generation complete! Cost: $${result.cost.total.toFixed(2)}`);
+        } catch (error) {
+            console.error('AI character generation failed:', error);
+            alert(t('characterCreator.aiGenerationFailed') + ': ' + (error as Error).message);
+            setGenerationProgress('');
+        } finally {
+            setIsGeneratingAI(false);
+        }
+    }, [selectedCharacter, aiGenerator, generation2DOptions, generation3DOptions, digitalHumanOptions, gaussianRenderer, handleUpdateCharacter]);
+
+    // Original image generation
     const handleGenerateImage = useCallback(async (type: 'fullbody' | 'headshot' | 'custom') => {
         if (!selectedCharacter) return;
         
@@ -201,7 +352,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             ...prev, 
             physicalDescription: prompt 
         }));
-        setShowPresetSelector(false);
+        closePresetModal();
     }, []);
 
     const handleSelectedCharacterPresetPrompt = useCallback((prompt: string) => {
@@ -212,11 +363,11 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             };
             handleUpdateCharacter(updatedCharacter);
             setSelectedCharacter(updatedCharacter);
-            setShowPresetSelector(false);
+            closePresetModal();
         }
     }, [selectedCharacter, handleUpdateCharacter]);
 
-    const handlePresetApply = useCallback((presets: Record<string, string[]>) => {
+    const handlePresetApply = useCallback((presets: Record<string, string[]>, target: 'new' | 'existing') => {
         const physicalCategories = ['bodyType', 'faceShape', 'ageRange', 'hairStyle', 'specialFeatures'];
         const clothingCategories = ['clothingStyle', 'accessories'];
         const personalityCategories = ['personality'];
@@ -243,7 +394,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             }
         });
         
-        if (isCreatingNew) {
+        if (target === 'new') {
             if (physicalPrompts.length > 0) {
                 setNewCharacter(prev => ({ 
                     ...prev, 
@@ -262,7 +413,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                     personalityTraits: personalityPrompts.join(', ') 
                 }));
             }
-        } else if (selectedCharacter) {
+        } else if (target === 'existing' && selectedCharacter) {
             const updatedCharacter = { ...selectedCharacter };
             if (physicalPrompts.length > 0) {
                 updatedCharacter.physicalDescription = physicalPrompts.join(', ');
@@ -277,11 +428,19 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             setSelectedCharacter(updatedCharacter);
         }
         
-        setSelectedPresets(presets);
-    }, [isCreatingNew, selectedCharacter, handleUpdateCharacter]);
+    }, [selectedCharacter, handleUpdateCharacter]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900">
+        <>
+            <CharacterPresetModal
+                isOpen={presetModalState.isOpen}
+                onClose={closePresetModal}
+                onPresetSelect={(presets) => handlePresetApply(presets, presetModalState.target)}
+                onGeneratePrompt={presetModalState.target === 'new' ? handleNewCharacterPresetPrompt : handleSelectedCharacterPresetPrompt}
+                context={presetModalState.target}
+                characterName={selectedCharacter?.name}
+            />
+            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900">
             {/* Header */}
             <div className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -344,7 +503,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-lg font-semibold text-white">{t('characterCreator.createNewCharacter')}</h3>
                                     <button
-                                        onClick={() => setShowPresetSelector(!showPresetSelector)}
+                                        onClick={() => openPresetModal('new')}
                                         className="px-3 py-1 bg-purple-600 rounded hover:bg-purple-700 transition-colors flex items-center space-x-1"
                                     >
                                         <Sparkles className="w-4 h-4" />
@@ -352,14 +511,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     </button>
                                 </div>
 
-                                {showPresetSelector && (
-                                    <div className="mb-4">
-                                        <CharacterPresetSelector
-                                            onPresetSelect={handlePresetApply}
-                                            onGeneratePrompt={handleNewCharacterPresetPrompt}
-                                        />
-                                    </div>
-                                )}
+                                
 
                                 <div className="space-y-4">
                                     <div>
@@ -528,7 +680,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     
                                     <div className="flex items-center space-x-2">
                                         <button
-                                            onClick={() => setShowPresetSelector(!showPresetSelector)}
+                                            onClick={() => openPresetModal('existing')}
                                             className="p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors"
                                             title={t('characterCreator.applyPresets')}
                                         >
@@ -545,14 +697,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     </div>
                                 </div>
 
-                                {showPresetSelector && (
-                                    <div className="mb-6">
-                                        <CharacterPresetSelector
-                                            onPresetSelect={handlePresetApply}
-                                            onGeneratePrompt={handleSelectedCharacterPresetPrompt}
-                                        />
-                                    </div>
-                                )}
+                                
 
                                 {/* Character Details */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -638,6 +783,181 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     )}
                                 </div>
 
+                                {/* AI-Powered Generation (2025 High-End) */}
+                                <div className="mb-6 p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+                                            <Zap className="w-5 h-5 text-yellow-400" />
+                                            <span>AI-Powered Generation (2025 Tech)</span>
+                                        </h3>
+                                        {generationProgress && (
+                                            <span className="text-sm text-green-400">{generationProgress}</span>
+                                        )}
+                                    </div>
+
+                                    {/* 2D Generation Options */}
+                                    <div className="mb-4">
+                                        <h4 className="text-sm font-medium text-gray-300 mb-2">2D Image Generation</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                                            <select
+                                                value={generation2DOptions.model}
+                                                onChange={(e) => setGeneration2DOptions({...generation2DOptions, model: e.target.value as any})}
+                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                            >
+                                                <option value="midjourney-v7">Midjourney v7</option>
+                                                <option value="google-imagen-4">Google Imagen 4</option>
+                                                <option value="stable-diffusion-3.5">SD 3.5 Large</option>
+                                                <option value="dall-e-3">DALL-E 3</option>
+                                            </select>
+                                            <select
+                                                value={generation2DOptions.style}
+                                                onChange={(e) => setGeneration2DOptions({...generation2DOptions, style: e.target.value as any})}
+                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                            >
+                                                <option value="photorealistic">Photorealistic</option>
+                                                <option value="cinematic">Cinematic</option>
+                                                <option value="anime">Anime</option>
+                                                <option value="pixar">Pixar Style</option>
+                                                <option value="concept-art">Concept Art</option>
+                                            </select>
+                                            <select
+                                                value={generation2DOptions.quality}
+                                                onChange={(e) => setGeneration2DOptions({...generation2DOptions, quality: e.target.value as any})}
+                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                            >
+                                                <option value="draft">Draft</option>
+                                                <option value="standard">Standard</option>
+                                                <option value="high">High</option>
+                                                <option value="ultra">Ultra</option>
+                                            </select>
+                                            <label className="flex items-center space-x-1 text-sm text-gray-300">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={generation2DOptions.video}
+                                                    onChange={(e) => setGeneration2DOptions({...generation2DOptions, video: e.target.checked})}
+                                                    className="rounded"
+                                                />
+                                                <span>Video</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* 3D Generation Options */}
+                                    <div className="mb-4">
+                                        <h4 className="text-sm font-medium text-gray-300 mb-2">3D Model Generation</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                                            <select
+                                                value={generation3DOptions.model}
+                                                onChange={(e) => setGeneration3DOptions({...generation3DOptions, model: e.target.value as any})}
+                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                            >
+                                                <option value="csm-ai">CSM AI (Best)</option>
+                                                <option value="meshy-ai">Meshy AI</option>
+                                                <option value="luma-genie">Luma Genie</option>
+                                                <option value="stable-zero123">Stable Zero123</option>
+                                            </select>
+                                            <select
+                                                value={generation3DOptions.format}
+                                                onChange={(e) => setGeneration3DOptions({...generation3DOptions, format: e.target.value as any})}
+                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                            >
+                                                <option value="glb">GLB</option>
+                                                <option value="fbx">FBX</option>
+                                                <option value="obj">OBJ</option>
+                                                <option value="usd">USD</option>
+                                                <option value="gaussian-splat">Gaussian Splat</option>
+                                            </select>
+                                            <select
+                                                value={generation3DOptions.textureResolution}
+                                                onChange={(e) => setGeneration3DOptions({...generation3DOptions, textureResolution: e.target.value as any})}
+                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                            >
+                                                <option value="2k">2K</option>
+                                                <option value="4k">4K</option>
+                                                <option value="8k">8K</option>
+                                            </select>
+                                            <label className="flex items-center space-x-1 text-sm text-gray-300">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={generation3DOptions.rigging}
+                                                    onChange={(e) => setGeneration3DOptions({...generation3DOptions, rigging: e.target.checked})}
+                                                    className="rounded"
+                                                />
+                                                <span>Rigging</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Digital Human Options */}
+                                    <div className="mb-4">
+                                        <h4 className="text-sm font-medium text-gray-300 mb-2">Digital Human</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
+                                            <select
+                                                value={digitalHumanOptions.provider}
+                                                onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, provider: e.target.value as any})}
+                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                            >
+                                                <option value="none">None</option>
+                                                <option value="did-agents-2">D-ID Agents 2.0</option>
+                                                <option value="heygen-avatar-3">HeyGen Avatar 3</option>
+                                                <option value="synthesia-personal">Synthesia Personal</option>
+                                            </select>
+                                            <label className="flex items-center space-x-1 text-sm text-gray-300">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={digitalHumanOptions.realTimeConversation}
+                                                    onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, realTimeConversation: e.target.checked})}
+                                                    className="rounded"
+                                                />
+                                                <span>Real-time</span>
+                                            </label>
+                                            <label className="flex items-center space-x-1 text-sm text-gray-300">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={digitalHumanOptions.lipSync}
+                                                    onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, lipSync: e.target.checked})}
+                                                    className="rounded"
+                                                />
+                                                <span>Lip Sync</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Generation Button */}
+                                    <button
+                                        onClick={handleGenerateAICharacter}
+                                        disabled={isGeneratingAI}
+                                        className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-600 transition-all flex items-center justify-center space-x-2 font-semibold"
+                                    >
+                                        {isGeneratingAI ? (
+                                            <>
+                                                <RefreshCw className="w-5 h-5 animate-spin" />
+                                                <span>Generating AI Character...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="w-5 h-5" />
+                                                <span>Generate Complete AI Character</span>
+                                                <Box className="w-5 h-5" />
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* 3D Viewer Container */}
+                                {selectedCharacter?.model3D && (
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                                            <Box className="w-5 h-5" />
+                                            <span>3D Model Viewer (Gaussian Splatting)</span>
+                                        </h3>
+                                        <div
+                                            ref={setRendererContainer}
+                                            className="w-full h-96 bg-gray-900 rounded-lg border border-gray-700"
+                                        />
+                                    </div>
+                                )}
+
                                 {/* Generated Images Gallery */}
                                 <div className="space-y-4">
                                     {selectedCharacter.fullBodyReference && (
@@ -689,7 +1009,9 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 </div>
             </div>
         </div>
-    );
+    </>
+);
 };
 
 export default CharacterCreator;
+

@@ -37,8 +37,7 @@ import { imageGenerator } from '../../services/professionalImageGenerator';
 import { characterManager } from '../../services/characterConsistency';
 import { styleGuideManager } from '../../services/styleGuideManager';
 import { promptEngineer } from '../../services/promptEngineering';
-import { CharacterPresetSelector } from '../character/CharacterPresetSelector';
-import { generatePromptFromPresets } from '../../data/characterPresets';
+import CharacterPresetModal from '../character/CharacterPresetModal';
 
 interface Props {
   apiKeys: Record<string, string>;
@@ -88,8 +87,58 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewMode, setPreviewMode] = useState<'grid' | 'timeline' | 'fullscreen'>('grid');
   const [selectedPreset, setSelectedPreset] = useState<string>('');
-  const [showPresetSelector, setShowPresetSelector] = useState(false);
+  const [isPresetModalOpen, setPresetModalOpen] = useState(false);
   const [selectedCharacterForPresets, setSelectedCharacterForPresets] = useState<string | null>(null);
+
+  const activePresetCharacter = selectedCharacterForPresets
+    ? project.characters.find((character) => character.id === selectedCharacterForPresets)
+    : null;
+
+  const openPresetModal = useCallback((characterId?: string) => {
+    if (characterId) {
+      setSelectedCharacterForPresets(characterId);
+      setPresetModalOpen(true);
+      return;
+    }
+
+    if (project.characters.length === 0) {
+      alert('Please create a character first.');
+      return;
+    }
+
+    setSelectedCharacterForPresets((prev) => prev ?? project.characters[0].id);
+    setPresetModalOpen(true);
+  }, [project.characters]);
+
+  const closePresetModal = useCallback(() => {
+    setPresetModalOpen(false);
+  }, []);
+
+  const handleCharacterPresetPrompt = useCallback((prompt: string) => {
+    setProject((prev) => {
+      const targetId = selectedCharacterForPresets ?? prev.characters[0]?.id;
+      if (!targetId) {
+        return prev;
+      }
+
+      const updatedCharacters = prev.characters.map((character) =>
+        character.id === targetId
+          ? { ...character, visualDescription: prompt, consistencyPrompt: prompt }
+          : character
+      );
+
+      return {
+        ...prev,
+        characters: updatedCharacters,
+        metadata: {
+          ...prev.metadata,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    });
+
+    setPresetModalOpen(false);
+  }, [selectedCharacterForPresets]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -277,7 +326,16 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <>
+      <CharacterPresetModal
+        isOpen={isPresetModalOpen}
+        onClose={closePresetModal}
+        onPresetSelect={() => {}}
+        onGeneratePrompt={handleCharacterPresetPrompt}
+        context="existing"
+        characterName={activePresetCharacter?.name}
+      />
+      <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="bg-black border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -483,7 +541,7 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
               <h2 className="text-2xl font-bold">Character Management</h2>
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setShowPresetSelector(!showPresetSelector)}
+                  onClick={() => openPresetModal()}
                   className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
                 >
                   <Sparkles className="w-5 h-5" />
@@ -499,35 +557,6 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
               </div>
             </div>
             
-            {/* Preset Selector */}
-            {showPresetSelector && (
-              <CharacterPresetSelector
-                onPresetSelect={(presets) => {
-                  console.log('Selected presets:', presets);
-                }}
-                onGeneratePrompt={(prompt) => {
-                  if (selectedCharacterForPresets) {
-                    const updatedCharacters = project.characters.map(c => 
-                      c.id === selectedCharacterForPresets
-                        ? { ...c, visualDescription: prompt }
-                        : c
-                    );
-                    setProject(prev => ({ ...prev, characters: updatedCharacters }));
-                  } else if (project.characters.length > 0) {
-                    const firstCharacter = project.characters[0];
-                    const updatedCharacters = project.characters.map(c => 
-                      c.id === firstCharacter.id
-                        ? { ...c, visualDescription: prompt }
-                        : c
-                    );
-                    setProject(prev => ({ ...prev, characters: updatedCharacters }));
-                  } else {
-                    alert('캐릭터를 먼저 생성하세요.');
-                  }
-                }}
-              />
-            )}
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {project.characters.map(character => (
                 <div key={character.id} className="bg-gray-800 rounded-lg p-4">
@@ -535,8 +564,7 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
                     <h3 className="text-lg font-semibold">{character.name}</h3>
                     <button
                       onClick={() => {
-                        setSelectedCharacterForPresets(character.id);
-                        setShowPresetSelector(true);
+                        openPresetModal(character.id);
                       }}
                       className="p-1 text-purple-400 hover:text-purple-300 transition-colors"
                       title="프리셋 적용"
@@ -1406,6 +1434,7 @@ export const ProfessionalStoryboardCreator: React.FC<Props> = ({
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </>
   );
 };

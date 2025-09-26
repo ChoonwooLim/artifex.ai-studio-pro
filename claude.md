@@ -21,7 +21,7 @@
 ### 중요: 정확한 날짜 확인
 **현재 날짜**: 시스템 `date` 명령어로 항상 확인
 **시간대**: 한국/서울 (KST, UTC+9)
-**마지막 확인**: 2025년 9월 20일 토요일
+**마지막 확인**: 2025년 9월 27일 일요일
 
 ```bash
 # 개발 시작 시 날짜 확인 (필수)
@@ -76,6 +76,8 @@ artifex.ai-studio-pro/
 │   └── ...                     # 기타 UI 컴포넌트
 ├── services/                    # 비즈니스 로직
 │   ├── aiProviders/            # AI 제공업체별 서비스
+│   ├── characterGeneration/    # 캐릭터 생성 서비스
+│   │   └── codexrk/           # 🆕 Professional Mode (CODEXRK v3.7.0)
 │   ├── geminiService.ts        # Google Gemini 통합
 │   ├── db.ts                   # IndexedDB 관리
 │   └── ...                     # 기타 서비스
@@ -86,7 +88,12 @@ artifex.ai-studio-pro/
 │   │   ├── AI_MODEL_INTEGRATION_PLAN.md
 │   │   └── MODEL_CHANGELOG.md
 │   └── features/               # 기능별 상세 문서
-│       └── CHARACTER_CONSISTENCY_SYSTEM.md  # 캐릭터 일관성 시스템
+│       ├── CHARACTER_CONSISTENCY_SYSTEM.md  # 캐릭터 일관성 시스템
+│       ├── IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md  # 🆕 CODEXRK v3.7.0 스펙
+│       ├── CODEXRK_PROMPT.txt  # 🆕 구현 지시문
+│       ├── TASKS_CODEXRK.md  # 🆕 백로그 (A-00 ~ A-13)
+│       ├── INTEGRATION_GUIDE.md  # 🆕 통합 패턴 가이드
+│       └── CODEXRK_IMPLEMENTATION_CHECKLIST.md  # 🆕 구현 체크리스트
 ├── scripts/                    # 유틸리티 스크립트
 └── Models/                     # 로컬 AI 모델 (gitignored)
 ```
@@ -104,12 +111,13 @@ artifex.ai-studio-pro/
 - **다국어 지원**: 한국어/영어 전환
 - **프로젝트 관리**: 로컬 DB 저장/불러오기
 - **갤러리**: 샘플 및 생성 작품 관리
+- **Character Creator (Basic Mode)**: 캐릭터 생성 및 프리셋 관리
 
 ### 🔄 진행 중
+- **CODEXRK Professional Mode**: Enterprise급 캐릭터 생성 시스템 🎯 [v3.7.0 통합 중]
 - **OpenAI GPT-5 통합**: 최신 플래그십 모델
 - **Anthropic Claude 4 통합**: Opus 4.1, Sonnet 4
 - **Wan2.2 로컬 모델**: 오프라인 비디오 생성
-- **Professional Mode**: 전문가용 고급 기능
 - **Character Consistency**: 캐릭터 일관성 유지 🔥 [상세 계획](./docs/features/CHARACTER_CONSISTENCY_SYSTEM.md)
 - **Style Guide Manager**: 스타일 가이드 관리
 
@@ -120,6 +128,87 @@ artifex.ai-studio-pro/
 - **Collaboration**: 다중 사용자 협업
 - **Export Options**: 다양한 포맷 내보내기
 - **Payment System**: 결제 시스템 통합
+
+---
+
+## 🎯 CODEXRK Professional Mode Integration (v3.7.0)
+
+### 개요
+CODEXRK는 기존 Character Creator에 통합되는 Enterprise급 캐릭터 생성 시스템입니다.
+Basic Mode의 모든 기능을 유지하면서 Professional Mode를 통해 고급 기능을 제공합니다.
+
+### 핵심 기능
+- **🔧 Orchestrator**: 작업 관리 및 SLO 모니터링
+- **🎨 Multi-Modal Adapters**: Image, Video, 3D, Gaussian 어댑터
+- **🔒 Consistency Engine 2.0**: 캐릭터 일관성 점수 0.92+ 보장
+- **🎮 UE5 Export**: Epic Mannequin 호환, LOD 지원
+- **📜 Rights Management**: C2PA 서명 + 워터마크
+- **📊 SLO Dashboard**: 실시간 성능 모니터링
+
+### SLO (Service Level Objectives)
+```typescript
+// constants/slo.constants.ts
+export const SLO_REQUIREMENTS = {
+  SUCCESS_RATE_WEEKLY: 0.97,      // 97% 이상
+  P95_CONCEPT_TO_3D_MIN: 4,       // 4분 이하
+  CONSISTENCY_P50: 0.95,          // 중앙값 95%
+  CONSISTENCY_P90: 0.92,          // 90 백분위 92%
+  UE5_IMPORT_PASS: 1.0,          // 100% 성공
+  AVG_COST_USD_PER_CHAR: 2.5     // $2.5 이하
+} as const;
+```
+
+### 통합 아키텍처
+```
+components/CharacterCreator.tsx (탭 래퍼)
+├── Basic Mode (기존 유지)
+│   └── CharacterCreatorBasic.tsx
+├── Professional Mode (신규)
+│   └── CharacterCreatorPro.tsx
+└── SLO Dashboard (신규)
+    └── CharacterSLOMonitorPro.tsx
+
+services/characterGeneration/
+├── [기존 파일들 - 수정 금지]
+└── codexrk/ (신규 디렉토리)
+    ├── orchestrator/
+    ├── adapters/
+    ├── consistency/
+    ├── exporters/
+    ├── rights/
+    └── telemetry/
+```
+
+### 개발 문서
+- **[IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md](./docs/features/IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md)**: v3.7.0 스펙 정의
+- **[CODEXRK_PROMPT.txt](./docs/features/CODEXRK_PROMPT.txt)**: 구현 지시문
+- **[TASKS_CODEXRK.md](./docs/features/TASKS_CODEXRK.md)**: 백로그 (A-00 ~ A-13)
+- **[INTEGRATION_GUIDE.md](./docs/features/INTEGRATION_GUIDE.md)**: 통합 패턴 가이드
+- **[CODEXRK_IMPLEMENTATION_CHECKLIST.md](./docs/features/CODEXRK_IMPLEMENTATION_CHECKLIST.md)**: 구현 체크리스트
+
+### 구현 원칙
+1. **기존 코드 100% 보존**: Basic Mode 파일 수정 금지
+2. **완전 격리**: 모든 CODEXRK 코드는 codexrk/ 디렉토리에 작성
+3. **데이터 독립성**: Basic(IndexedDB) / Pro(PostgreSQL) 분리
+4. **UI 통합**: 탭 기반 모드 전환
+5. **SLO 준수**: 임계값 미달 시 자동 롤백
+
+### 시작하기
+```bash
+# Phase 0: 사전 준비
+git checkout -b feature/codexrk-integration
+npm test  # 기존 테스트 100% 통과 확인
+
+# Phase 1: 기반 작업
+# 1. CharacterCreator.tsx를 CharacterCreatorBasic.tsx로 복사
+# 2. codexrk/ 디렉토리 구조 생성
+# 3. 탭 래퍼 구현
+
+# 개발 중 필수 체크
+npm run lint
+npm run typecheck
+npm test
+```
 
 ---
 
@@ -197,10 +286,15 @@ gantt
 
 ## 🎯 Active Development Plan
 
-### Current Focus: AI Model Integration
+### Current Focus: CODEXRK Professional Mode Integration
+- **Primary Goal**: Character Creator에 Enterprise급 기능 통합
+- **Specification**: [IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md](./docs/features/IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md)
+- **Implementation Checklist**: [CODEXRK_IMPLEMENTATION_CHECKLIST.md](./docs/features/CODEXRK_IMPLEMENTATION_CHECKLIST.md)
+- **Last Updated**: 2025-09-27
+
+### AI Model Integration (Ongoing)
 - **Master Plan**: [AI_MODEL_INTEGRATION_PLAN.md](./docs/ai-models/AI_MODEL_INTEGRATION_PLAN.md)
 - **Change Log**: [MODEL_CHANGELOG.md](./docs/ai-models/MODEL_CHANGELOG.md)
-- **Last Updated**: 2025-09-20
 
 ### Critical Development References
 When working on AI model features, ALWAYS reference:
@@ -597,10 +691,10 @@ Error: CORS policy blocked
 
 ## 🚀 즉시 실행 가능한 작업
 
-### Today (2025-09-20)
-- [ ] OpenAI Service 구현 시작
-- [ ] API 키 관리 UI 개선
-- [ ] Professional Mode UI 프로토타입
+### Today (2025-09-27)
+- [ ] CODEXRK Phase 0: 사전 준비 시작
+- [ ] CharacterCreatorBasic.tsx 생성 및 테스트
+- [ ] codexrk/ 디렉토리 구조 생성
 
 ### This Week
 - [ ] 3개 이상 AI 제공자 통합 완료
@@ -633,14 +727,15 @@ Error: CORS policy blocked
 
 ## 🎯 Next Steps
 
-1. **즉시 실행**:
-   - [ ] `npm run check-ai-models` 실행
-   - [ ] docs/ai-models/AI_MODEL_INTEGRATION_PLAN.md 검토
+1. **즉시 실행 (CODEXRK Integration)**:
+   - [ ] docs/features/CODEXRK_IMPLEMENTATION_CHECKLIST.md 검토
+   - [ ] CharacterCreatorBasic.tsx 생성
+   - [ ] codexrk/ 디렉토리 구조 생성
 
 2. **단기 (1주일)**:
-   - [ ] OpenAI 통합 구현
-   - [ ] Anthropic 통합 구현
-   - [ ] UI 컴포넌트 완성
+   - [ ] CODEXRK Phase 1-2 완료 (기반 작업 + Core 구현)
+   - [ ] Professional API 엔드포인트 구현
+   - [ ] 어댑터 Mock 구현
 
 3. **중기 (2주일)**:
    - [ ] Image AI 통합
@@ -656,4 +751,4 @@ Error: CORS policy blocked
 
 *이 문서는 Artifex.AI Studio Pro의 핵심 개발 가이드입니다.*
 *개발자는 프로젝트 시작 시 이 문서를 참조하여 전체 맥락을 파악해야 합니다.*
-*최종 업데이트: 2025년 9월 20일 토요일*
+*최종 업데이트: 2025년 9월 27일 일요일*

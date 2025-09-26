@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Character } from '../../types';
 import CharacterCard from './CharacterCard';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { CharacterPresetSelector } from './CharacterPresetSelector';
+import CharacterPresetModal from './CharacterPresetModal';
 import { CHARACTER_PRESETS } from '../../data/characterPresets';
 import { Sparkles } from 'lucide-react';
 
@@ -32,7 +32,7 @@ const CharacterManager: React.FC<CharacterManagerProps> = ({
     });
     const [characterSetName, setCharacterSetName] = useState('');
     const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
-    const [showPresetSelector, setShowPresetSelector] = useState(false);
+    const [presetModalState, setPresetModalState] = useState<{ isOpen: boolean; target: 'new' | 'existing'; characterId?: string }>({ isOpen: false, target: 'new' });
 
     const handleAddCharacter = () => {
         if (newCharacter.name && newCharacter.physicalDescription) {
@@ -105,8 +105,100 @@ const CharacterManager: React.FC<CharacterManagerProps> = ({
         return characters.filter(char => char.role === role);
     };
 
+    const activePresetCharacter = presetModalState.characterId
+        ? characters.find(char => char.id === presetModalState.characterId)
+        : undefined;
+
+    const openPresetModal = useCallback((target: 'new' | 'existing', characterId?: string) => {
+        setPresetModalState({ isOpen: true, target, characterId });
+    }, []);
+
+    const closePresetModal = useCallback(() => {
+        setPresetModalState(prev => ({ ...prev, isOpen: false, characterId: undefined }));
+    }, []);
+
+    const handlePresetSelection = useCallback((presets: Record<string, string[]>) => {
+        const physicalCategories = ['bodyType', 'faceShape', 'ageRange', 'hairStyle', 'specialFeatures'];
+        const clothingCategories = ['clothingStyle', 'accessories'];
+        const personalityCategories = ['personality'];
+
+        const physicalPrompts: string[] = [];
+        const clothingPrompts: string[] = [];
+        const personalityPrompts: string[] = [];
+
+        Object.entries(presets).forEach(([category, itemIds]) => {
+            const categoryData = CHARACTER_PRESETS[category as keyof typeof CHARACTER_PRESETS];
+            if (categoryData) {
+                itemIds.forEach((itemId: string) => {
+                    const item = categoryData.items.find((i: any) => i.id === itemId);
+                    if (item) {
+                        if (physicalCategories.includes(category)) {
+                            physicalPrompts.push(item.prompt);
+                        } else if (clothingCategories.includes(category)) {
+                            clothingPrompts.push(item.prompt);
+                        } else if (personalityCategories.includes(category)) {
+                            personalityPrompts.push(item.prompt);
+                        }
+                    }
+                });
+            }
+        });
+
+        if (presetModalState.target === 'new') {
+            if (physicalPrompts.length > 0) {
+                setNewCharacter(prev => ({ ...prev, physicalDescription: physicalPrompts.join(', ') }));
+            }
+            if (clothingPrompts.length > 0) {
+                setNewCharacter(prev => ({ ...prev, clothingDescription: clothingPrompts.join(', ') }));
+            }
+            if (personalityPrompts.length > 0) {
+                setNewCharacter(prev => ({ ...prev, personalityTraits: personalityPrompts.join(', ') }));
+            }
+        } else if (presetModalState.target === 'existing' && presetModalState.characterId) {
+            const updatedCharacters = characters.map(char => {
+                if (char.id !== presetModalState.characterId) return char;
+
+                const updatedCharacter = { ...char };
+                if (physicalPrompts.length > 0) {
+                    updatedCharacter.physicalDescription = physicalPrompts.join(', ');
+                }
+                if (clothingPrompts.length > 0) {
+                    updatedCharacter.clothingDescription = clothingPrompts.join(', ');
+                }
+                if (personalityPrompts.length > 0) {
+                    updatedCharacter.personalityTraits = personalityPrompts.join(', ');
+                }
+                return updatedCharacter;
+            });
+
+            onCharactersUpdate(updatedCharacters);
+        }
+    }, [presetModalState, characters, onCharactersUpdate]);
+
+    const handlePresetPrompt = useCallback((prompt: string) => {
+        if (presetModalState.target === 'new') {
+            setNewCharacter(prev => ({ ...prev, physicalDescription: prompt }));
+        } else if (presetModalState.target === 'existing' && presetModalState.characterId) {
+            const updatedCharacters = characters.map(char =>
+                char.id === presetModalState.characterId
+                    ? { ...char, physicalDescription: prompt }
+                    : char
+            );
+            onCharactersUpdate(updatedCharacters);
+        }
+    }, [presetModalState, characters, onCharactersUpdate]);
+
     return (
-        <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+        <>
+            <CharacterPresetModal
+                isOpen={presetModalState.isOpen}
+                onClose={closePresetModal}
+                onPresetSelect={handlePresetSelection}
+                onGeneratePrompt={handlePresetPrompt}
+                context={presetModalState.target}
+                characterName={activePresetCharacter?.name}
+            />
+            <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <div>
@@ -132,81 +224,13 @@ const CharacterManager: React.FC<CharacterManagerProps> = ({
                         <h4 className="text-lg font-semibold text-white">새 캐릭터 추가</h4>
                         <button
                             type="button"
-                            onClick={() => setShowPresetSelector(!showPresetSelector)}
+                            onClick={() => openPresetModal('new')}
                             className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
                         >
                             <Sparkles className="w-4 h-4" />
                             프리셋 선택기
                         </button>
                     </div>
-                    
-                    {/* Preset Selector */}
-                    {showPresetSelector && (
-                        <div className="mb-4">
-                            <CharacterPresetSelector
-                                onPresetSelect={(presets) => {
-                                    // 카테고리별 필드 분리
-                                    const physicalCategories = ['bodyType', 'faceShape', 'ageRange', 'hairStyle', 'specialFeatures'];
-                                    const clothingCategories = ['clothingStyle', 'accessories'];
-                                    const personalityCategories = ['personality'];
-                                    
-                                    const physicalPrompts: string[] = [];
-                                    const clothingPrompts: string[] = [];
-                                    const personalityPrompts: string[] = [];
-                                    
-                                    Object.entries(presets).forEach(([category, itemIds]) => {
-                                        const categoryData = CHARACTER_PRESETS[category as keyof typeof CHARACTER_PRESETS];
-                                        if (categoryData) {
-                                            itemIds.forEach((itemId: string) => {
-                                                const item = categoryData.items.find((i: any) => i.id === itemId);
-                                                if (item) {
-                                                    if (physicalCategories.includes(category)) {
-                                                        physicalPrompts.push(item.prompt);
-                                                    } else if (clothingCategories.includes(category)) {
-                                                        clothingPrompts.push(item.prompt);
-                                                    } else if (personalityCategories.includes(category)) {
-                                                        personalityPrompts.push(item.prompt);
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    });
-                                    
-                                    // 각 필드에 적절한 프롬프트 입력
-                                    if (physicalPrompts.length > 0) {
-                                        const currentPhysical = newCharacter.physicalDescription || '';
-                                        const newPhysical = currentPhysical 
-                                            ? `${currentPhysical}, ${physicalPrompts.join(', ')}`
-                                            : physicalPrompts.join(', ');
-                                        setNewCharacter(prev => ({ ...prev, physicalDescription: newPhysical }));
-                                    }
-                                    
-                                    if (clothingPrompts.length > 0) {
-                                        const currentClothing = newCharacter.clothingDescription || '';
-                                        const newClothing = currentClothing
-                                            ? `${currentClothing}, ${clothingPrompts.join(', ')}`
-                                            : clothingPrompts.join(', ');
-                                        setNewCharacter(prev => ({ ...prev, clothingDescription: newClothing }));
-                                    }
-                                    
-                                    if (personalityPrompts.length > 0) {
-                                        const currentPersonality = newCharacter.personalityTraits || '';
-                                        const newPersonality = currentPersonality
-                                            ? `${currentPersonality}, ${personalityPrompts.join(', ')}`
-                                            : personalityPrompts.join(', ');
-                                        setNewCharacter(prev => ({ ...prev, personalityTraits: newPersonality }));
-                                    }
-                                }}
-                                onGeneratePrompt={(prompt) => {
-                                    // 전체 프롬프트를 physicalDescription에 추가 (호환성을 위해 유지)
-                                    const currentDesc = newCharacter.physicalDescription || '';
-                                    const newDesc = currentDesc ? `${currentDesc}, ${prompt}` : prompt;
-                                    setNewCharacter({ ...newCharacter, physicalDescription: newDesc });
-                                    setShowPresetSelector(false);
-                                }}
-                            />
-                        </div>
-                    )}
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -389,7 +413,8 @@ const CharacterManager: React.FC<CharacterManagerProps> = ({
                     </div>
                 </div>
             )}
-        </div>
+                    </div>
+        </>
     );
 };
 
