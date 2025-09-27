@@ -44,9 +44,9 @@ interface CharacterCreatorProps {
 
 interface CharacterWithExtras extends Character {
     characterStyle?: 'cinematic' | 'photorealistic' | 'animation' | 'anime' | 'concept-art';
-    fullBodyReference?: string;
-    headShotReference?: string;
-    poseReferences?: string[];
+    fullBodyImage?: string;  // 왼쪽: 전신
+    frontFaceImage?: string;  // 오른쪽 상단: 정면 얼굴
+    angleFaceImage?: string;  // 오른쪽 하단: 45도 얼굴
     generatedImages?: string[];
     // AI Generation features
     characterDNA?: any;
@@ -79,10 +79,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     const [presetModalState, setPresetModalState] = useState<{ isOpen: boolean; target: 'new' | 'existing' }>({ isOpen: false, target: 'new' });
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [imageGenerationOptions, setImageGenerationOptions] = useState({
-        fullBodyReference: false,
-        headshot: false
-    });
+    // 3 images will be generated automatically when Generate button is clicked
     const [aiGenerationEnabled, setAiGenerationEnabled] = useState({
         generate3D: false,
         generateDigitalHuman: false
@@ -118,6 +115,13 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     });
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
     const [generationProgress, setGenerationProgress] = useState('');
+    const [generationError, setGenerationError] = useState<{
+        message: string;
+        retryCallback?: () => void;
+    } | null>(null);
+    const [isLoading3D, setIsLoading3D] = useState(false);
+    const [render3DError, setRender3DError] = useState<string | null>(null);
+    const [presetApplyMode, setPresetApplyMode] = useState<'append' | 'replace'>('replace');
 
     const [newCharacter, setNewCharacter] = useState<Partial<CharacterWithExtras>>({
         name: '',
@@ -132,6 +136,48 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     const openPresetModal = useCallback((target: 'new' | 'existing') => {
         setPresetModalState({ isOpen: true, target });
     }, []);
+
+    // Restore from localStorage on mount
+    React.useEffect(() => {
+        try {
+            const savedData = localStorage.getItem('characterCreatorData');
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                if (parsed.characters && Array.isArray(parsed.characters)) {
+                    setCharacters(parsed.characters);
+                }
+                if (parsed.selectedCharacter) {
+                    setSelectedCharacter(parsed.selectedCharacter);
+                }
+                // imageGenerationOptions removed - now automatically generates 3 images
+                if (parsed.generation2DOptions) {
+                    setGeneration2DOptions(parsed.generation2DOptions);
+                }
+                console.log('Character data restored from localStorage');
+            }
+        } catch (error) {
+            console.error('Failed to restore character data:', error);
+        }
+    }, []);
+
+    // Save to localStorage when data changes
+    React.useEffect(() => {
+        if (characters.length > 0 || selectedCharacter) {
+            try {
+                const dataToSave = {
+                    characters,
+                    selectedCharacter,
+                    // imageGenerationOptions removed,
+                    generation2DOptions,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('characterCreatorData', JSON.stringify(dataToSave));
+            } catch (error) {
+                console.error('Failed to save character data:', error);
+                // Could show a toast notification here
+            }
+        }
+    }, [characters, selectedCharacter, generation2DOptions]);
 
     // Initialize AI Generator
     React.useEffect(() => {
@@ -268,74 +314,101 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
             // Load 3D model in Gaussian renderer if available
             if (result.model3D?.gaussianSplat && gaussianRenderer) {
-                await gaussianRenderer.loadGaussianSplat(result.model3D.gaussianSplat.url, selectedCharacter.id);
+                setIsLoading3D(true);
+                setRender3DError(null);
+                try {
+                    await gaussianRenderer.loadGaussianSplat(result.model3D.gaussianSplat.url, selectedCharacter.id);
+                } catch (error) {
+                    console.error('Failed to load 3D model:', error);
+                    setRender3DError((error as Error).message);
+                } finally {
+                    setIsLoading3D(false);
+                }
             } else if (result.model3D && gaussianRenderer) {
-                await gaussianRenderer.loadModel(result.model3D.url, result.model3D.format as any);
+                setIsLoading3D(true);
+                setRender3DError(null);
+                try {
+                    await gaussianRenderer.loadModel(result.model3D.url, result.model3D.format as any);
+                } catch (error) {
+                    console.error('Failed to load 3D model:', error);
+                    setRender3DError((error as Error).message);
+                } finally {
+                    setIsLoading3D(false);
+                }
             }
 
             setGenerationProgress(`✅ Generation complete! Cost: $${result.cost.total.toFixed(2)}`);
         } catch (error) {
             console.error('AI character generation failed:', error);
-            alert(t('characterCreator.aiGenerationFailed') + ': ' + (error as Error).message);
+            setGenerationError({
+                message: `${t('characterCreator.aiGenerationFailed')}: ${(error as Error).message}`,
+                retryCallback: () => {
+                    setGenerationError(null);
+                    handleGenerateAICharacter();
+                }
+            });
             setGenerationProgress('');
         } finally {
             setIsGeneratingAI(false);
         }
     }, [selectedCharacter, aiGenerator, generation2DOptions, generation3DOptions, digitalHumanOptions, gaussianRenderer, handleUpdateCharacter, aiGenerationEnabled, t]);
 
-    // Unified generation for all selected options
+    // Generate all three images automatically
     const handleGenerateAll = useCallback(async () => {
         if (!selectedCharacter) return;
 
-        // Check if any option is selected
-        const hasBasicOptions = imageGenerationOptions.fullBodyReference || imageGenerationOptions.headshot;
+        // Check if AI options are selected
         const hasAIOptions = aiGenerationEnabled.generate3D || aiGenerationEnabled.generateDigitalHuman;
 
-        if (!hasBasicOptions && !hasAIOptions) return;
-
-        // Set both loading states
-        if (hasBasicOptions) setIsGenerating(true);
+        // Set loading states
+        setIsGenerating(true);
         if (hasAIOptions) setIsGeneratingAI(true);
 
         try {
             const updatedCharacter = { ...selectedCharacter };
 
-            // Generate basic images if selected
-            if (hasBasicOptions) {
-                const styleModifier = selectedCharacter.characterStyle === 'photorealistic'
-                    ? 'photorealistic, ultra realistic, 8k resolution'
-                    : selectedCharacter.characterStyle === 'animation'
-                    ? '3D animation style, pixar style, disney style'
-                    : selectedCharacter.characterStyle === 'anime'
-                    ? 'anime style, manga style, japanese animation'
-                    : selectedCharacter.characterStyle === 'concept-art'
-                    ? 'concept art, digital painting, artstation'
-                    : 'cinematic, movie still, film grain';
+            // Generate basic images (always generate all three)
+            const styleModifier = selectedCharacter.characterStyle === 'photorealistic'
+                ? 'photorealistic, ultra realistic, 8k resolution'
+                : selectedCharacter.characterStyle === 'animation'
+                ? '3D animation style, pixar style, disney style'
+                : selectedCharacter.characterStyle === 'anime'
+                ? 'anime style, manga style, japanese animation'
+                : selectedCharacter.characterStyle === 'concept-art'
+                ? 'concept art, digital painting, artstation'
+                : 'cinematic, movie still, film grain';
 
-                // Generate full body reference if selected
-                if (imageGenerationOptions.fullBodyReference) {
-                    const fullBodyPrompt = `Full body portrait, standing pose, complete view from head to toe, ${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}, professional lighting, neutral background, character reference sheet`;
-                    console.log(`Generating full body with model: ${generation2DOptions.model}`);
-                    const imageUrls = await aiService.generateImage({
-                        prompt: fullBodyPrompt,
-                        model: generation2DOptions.model,
-                        count: 1
-                    });
-                    updatedCharacter.fullBodyReference = imageUrls[0];
-                }
+            setGenerationProgress(t('characterCreator.generatingImages'));
 
-                // Generate headshot if selected
-                if (imageGenerationOptions.headshot) {
-                    const headshotPrompt = `Portrait headshot, close-up face, ${selectedCharacter.physicalDescription}, ${styleModifier}, professional lighting, neutral background, character reference`;
-                    console.log(`Generating headshot with model: ${generation2DOptions.model}`);
-                    const imageUrls = await aiService.generateImage({
-                        prompt: headshotPrompt,
-                        model: generation2DOptions.model,
-                        count: 1
-                    });
-                    updatedCharacter.headShotReference = imageUrls[0];
-                }
-            }
+            // 1. Generate full body image (왼쪽)
+            const fullBodyPrompt = `Full body portrait, standing pose, complete view from head to toe, ${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}, soft studio lighting, simple gradient background, clean studio backdrop with subtle color gradation, no film frames, no decorations, no props, minimal background, pure background only`;
+            console.log(`Generating full body with model: ${generation2DOptions.model}`);
+            const fullBodyImages = await aiService.generateImage({
+                prompt: fullBodyPrompt,
+                model: generation2DOptions.model,
+                count: 1
+            });
+            updatedCharacter.fullBodyImage = fullBodyImages[0];
+
+            // 2. Generate front face image (오른쪽 상단 - 여권 사진 스타일)
+            const frontFacePrompt = `Professional passport photo style, straight front facing portrait, neutral expression, looking directly at camera, centered face, shoulders visible, ${selectedCharacter.physicalDescription}, ${styleModifier}, even lighting, simple gradient background, clean studio backdrop with subtle color gradation, no shadows, no film frames, no decorations, minimal background, pure background only`;
+            console.log(`Generating front face with model: ${generation2DOptions.model}`);
+            const frontFaceImages = await aiService.generateImage({
+                prompt: frontFacePrompt,
+                model: generation2DOptions.model,
+                count: 1
+            });
+            updatedCharacter.frontFaceImage = frontFaceImages[0];
+
+            // 3. Generate 45-degree angle face image (오른쪽 하단)
+            const angleFacePrompt = `Natural portrait, face turned 45 degrees to the side, three-quarter view, relaxed expression, ${selectedCharacter.physicalDescription}, ${styleModifier}, soft directional lighting, simple gradient background, clean studio backdrop with subtle color gradation, no film frames, no decorations, minimal background, pure background only`;
+            console.log(`Generating angle face with model: ${generation2DOptions.model}`);
+            const angleFaceImages = await aiService.generateImage({
+                prompt: angleFacePrompt,
+                model: generation2DOptions.model,
+                count: 1
+            });
+            updatedCharacter.angleFaceImage = angleFaceImages[0];
 
             // Generate AI-powered content if selected and generator is available
             if (hasAIOptions && aiGenerator) {
@@ -382,9 +455,27 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
                 // Load 3D model in Gaussian renderer if available
                 if (result.model3D?.gaussianSplat && gaussianRenderer) {
-                    await gaussianRenderer.loadGaussianSplat(result.model3D.gaussianSplat.url, selectedCharacter.id);
+                    setIsLoading3D(true);
+                    setRender3DError(null);
+                    try {
+                        await gaussianRenderer.loadGaussianSplat(result.model3D.gaussianSplat.url, selectedCharacter.id);
+                    } catch (error) {
+                        console.error('Failed to load 3D model:', error);
+                        setRender3DError((error as Error).message);
+                    } finally {
+                        setIsLoading3D(false);
+                    }
                 } else if (result.model3D && gaussianRenderer) {
-                    await gaussianRenderer.loadModel(result.model3D.url, result.model3D.format as any);
+                    setIsLoading3D(true);
+                    setRender3DError(null);
+                    try {
+                        await gaussianRenderer.loadModel(result.model3D.url, result.model3D.format as any);
+                    } catch (error) {
+                        console.error('Failed to load 3D model:', error);
+                        setRender3DError((error as Error).message);
+                    } finally {
+                        setIsLoading3D(false);
+                    }
                 }
 
                 setGenerationProgress(`✅ Generation complete!`);
@@ -396,7 +487,14 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
         } catch (error) {
             console.error('Failed to generate character assets:', error);
-            alert(t('characterCreator.generationFailed') + ': ' + (error as Error).message);
+            setGenerationError({
+                message: `${t('characterCreator.generationFailed')}: ${(error as Error).message}`,
+                retryCallback: () => {
+                    setGenerationError(null);
+                    handleGenerateAll();
+                }
+            });
+            setGenerationProgress('');
         } finally {
             setIsGenerating(false);
             setIsGeneratingAI(false);
@@ -404,7 +502,6 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
         }
     }, [
         selectedCharacter,
-        imageGenerationOptions,
         aiGenerationEnabled,
         apiKeys,
         aiGenerator,
@@ -416,58 +513,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
         t
     ]);
 
-    // Batch image generation
-    const handleBatchImageGeneration = useCallback(async () => {
-        if (!selectedCharacter) return;
-        if (!imageGenerationOptions.fullBodyReference && !imageGenerationOptions.headshot) return;
-
-        setIsGenerating(true);
-        try {
-            const styleModifier = selectedCharacter.characterStyle === 'photorealistic'
-                ? 'photorealistic, ultra realistic, 8k resolution'
-                : selectedCharacter.characterStyle === 'animation'
-                ? '3D animation style, pixar style, disney style'
-                : selectedCharacter.characterStyle === 'anime'
-                ? 'anime style, manga style, japanese animation'
-                : selectedCharacter.characterStyle === 'concept-art'
-                ? 'concept art, digital painting, artstation'
-                : 'cinematic, movie still, film grain';
-
-            const updatedCharacter = { ...selectedCharacter };
-
-            // Generate full body reference if selected
-            if (imageGenerationOptions.fullBodyReference) {
-                const fullBodyPrompt = `Full body portrait, standing pose, complete view from head to toe, ${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}, professional lighting, neutral background, character reference sheet`;
-                console.log(`Batch generation - Full body with model: ${generation2DOptions.model}`);
-                const imageUrls = await aiService.generateImage({
-                    prompt: fullBodyPrompt,
-                    model: generation2DOptions.model,
-                    count: 1
-                });
-                updatedCharacter.fullBodyReference = imageUrls[0];
-            }
-
-            // Generate headshot if selected
-            if (imageGenerationOptions.headshot) {
-                const headshotPrompt = `Portrait headshot, close-up face, ${selectedCharacter.physicalDescription}, ${styleModifier}, professional lighting, neutral background, character reference`;
-                console.log(`Batch generation - Headshot with model: ${generation2DOptions.model}`);
-                const imageUrls = await aiService.generateImage({
-                    prompt: headshotPrompt,
-                    model: generation2DOptions.model,
-                    count: 1
-                });
-                updatedCharacter.headShotReference = imageUrls[0];
-            }
-
-            handleUpdateCharacter(updatedCharacter);
-            setSelectedCharacter(updatedCharacter);
-        } catch (error) {
-            console.error('Failed to generate images:', error);
-            alert(t('characterCreator.imageGenerationFailed') + ': ' + (error as Error).message);
-        } finally {
-            setIsGenerating(false);
-        }
-    }, [selectedCharacter, imageGenerationOptions, generation2DOptions, apiKeys, handleUpdateCharacter, t]);
+    // Removed handleBatchImageGeneration - now using handleGenerateAll for automatic 3-image generation
 
     // Export/Import
     const handleExportCharacter = useCallback(() => {
@@ -496,7 +542,11 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 setCharacters([...characters, character]);
                 setSelectedCharacter(character);
             } catch (error) {
-                alert(t('characterCreator.cannotReadCharacterFile'));
+                console.error('Failed to read character file:', error);
+                setGenerationError({
+                    message: t('characterCreator.cannotReadCharacterFile'),
+                    retryCallback: undefined
+                });
             }
         };
         reader.readAsText(file);
@@ -522,6 +572,22 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             closePresetModal();
         }
     }, [selectedCharacter, handleUpdateCharacter]);
+
+    // Utility function to merge text with duplicate removal
+    const mergeUnique = (existing: string, newText: string): string => {
+        if (!existing) return newText;
+        if (!newText) return existing;
+
+        const existingParts = existing.split(',').map(s => s.trim().toLowerCase());
+        const newParts = newText.split(',').map(s => s.trim());
+
+        const uniqueNewParts = newParts.filter(part =>
+            !existingParts.includes(part.toLowerCase())
+        );
+
+        if (uniqueNewParts.length === 0) return existing;
+        return existing + ', ' + uniqueNewParts.join(', ');
+    };
 
     const handlePresetApply = useCallback((presets: Record<string, string[]>, target: 'new' | 'existing') => {
         const physicalCategories = ['bodyType', 'faceShape', 'ageRange', 'hairStyle', 'specialFeatures'];
@@ -554,19 +620,25 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             if (physicalPrompts.length > 0) {
                 setNewCharacter(prev => ({
                     ...prev,
-                    physicalDescription: physicalPrompts.join(', ')
+                    physicalDescription: presetApplyMode === 'append'
+                        ? mergeUnique(prev.physicalDescription || '', physicalPrompts.join(', '))
+                        : physicalPrompts.join(', ')
                 }));
             }
             if (clothingPrompts.length > 0) {
                 setNewCharacter(prev => ({
                     ...prev,
-                    clothingDescription: clothingPrompts.join(', ')
+                    clothingDescription: presetApplyMode === 'append'
+                        ? mergeUnique(prev.clothingDescription || '', clothingPrompts.join(', '))
+                        : clothingPrompts.join(', ')
                 }));
             }
             if (personalityPrompts.length > 0) {
                 setNewCharacter(prev => ({
                     ...prev,
-                    personalityTraits: personalityPrompts.join(', ')
+                    personalityTraits: presetApplyMode === 'append'
+                        ? mergeUnique(prev.personalityTraits || '', personalityPrompts.join(', '))
+                        : personalityPrompts.join(', ')
                 }));
             }
         } else if (target === 'existing') {
@@ -575,13 +647,19 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 if (!current) return current;
                 const updatedCharacter = { ...current };
                 if (physicalPrompts.length > 0) {
-                    updatedCharacter.physicalDescription = physicalPrompts.join(', ');
+                    updatedCharacter.physicalDescription = presetApplyMode === 'append'
+                        ? mergeUnique(current.physicalDescription, physicalPrompts.join(', '))
+                        : physicalPrompts.join(', ');
                 }
                 if (clothingPrompts.length > 0) {
-                    updatedCharacter.clothingDescription = clothingPrompts.join(', ');
+                    updatedCharacter.clothingDescription = presetApplyMode === 'append'
+                        ? mergeUnique(current.clothingDescription, clothingPrompts.join(', '))
+                        : clothingPrompts.join(', ');
                 }
                 if (personalityPrompts.length > 0) {
-                    updatedCharacter.personalityTraits = personalityPrompts.join(', ');
+                    updatedCharacter.personalityTraits = presetApplyMode === 'append'
+                        ? mergeUnique(current.personalityTraits, personalityPrompts.join(', '))
+                        : personalityPrompts.join(', ');
                 }
                 // Call handleUpdateCharacter outside of setState
                 setTimeout(() => handleUpdateCharacter(updatedCharacter), 0);
@@ -663,13 +741,40 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                             <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-lg font-semibold text-white">{t('characterCreator.createNewCharacter')}</h3>
-                                    <button
-                                        onClick={() => openPresetModal('new')}
-                                        className="px-3 py-1 bg-purple-600 rounded hover:bg-purple-700 transition-colors flex items-center space-x-1"
-                                    >
-                                        <Sparkles className="w-4 h-4" />
-                                        <span className="text-sm">{t('characterCreator.presets')}</span>
-                                    </button>
+                                    <div className="flex items-center space-x-2">
+                                        {/* Preset Mode Toggle */}
+                                        <div className="flex items-center bg-gray-700 rounded p-1">
+                                            <button
+                                                onClick={() => setPresetApplyMode('replace')}
+                                                className={`px-2 py-1 text-xs rounded transition-colors ${
+                                                    presetApplyMode === 'replace'
+                                                        ? 'bg-purple-600 text-white'
+                                                        : 'text-gray-400 hover:text-white'
+                                                }`}
+                                                title={t('characterCreator.replaceMode')}
+                                            >
+                                                Replace
+                                            </button>
+                                            <button
+                                                onClick={() => setPresetApplyMode('append')}
+                                                className={`px-2 py-1 text-xs rounded transition-colors ${
+                                                    presetApplyMode === 'append'
+                                                        ? 'bg-purple-600 text-white'
+                                                        : 'text-gray-400 hover:text-white'
+                                                }`}
+                                                title={t('characterCreator.appendMode')}
+                                            >
+                                                Append
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={() => openPresetModal('new')}
+                                            className="px-3 py-1 bg-purple-600 rounded hover:bg-purple-700 transition-colors flex items-center space-x-1"
+                                        >
+                                            <Sparkles className="w-4 h-4" />
+                                            <span className="text-sm">{t('characterCreator.presets')}</span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 
@@ -792,7 +897,15 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     {characters.map(character => (
                                         <div
                                             key={character.id}
-                                            onClick={() => setSelectedCharacter(character)}
+                                            onClick={() => {
+                                                // Clean up previous 3D model if switching characters
+                                                if (selectedCharacter?.id !== character.id && gaussianRenderer && selectedCharacter?.model3D) {
+                                                    gaussianRenderer.destroy();
+                                                    setGaussianRenderer(null);
+                                                    setRender3DError(null);
+                                                }
+                                                setSelectedCharacter(character);
+                                            }}
                                             className={`
                                                 p-3 bg-gray-700 rounded-lg cursor-pointer transition-all
                                                 ${selectedCharacter?.id === character.id ? 'ring-2 ring-purple-500' : 'hover:bg-gray-600'}
@@ -831,6 +944,32 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
                     {/* Right Panel - Character Details & Generation */}
                     <div className="lg:col-span-2">
+                        {/* Error Banner */}
+                        {generationError && (
+                            <div className="bg-red-900/20 border border-red-500 rounded-lg p-3 mb-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-red-300 text-sm">{generationError.message}</span>
+                                    <div className="flex items-center space-x-2">
+                                        {generationError.retryCallback && (
+                                            <button
+                                                onClick={generationError.retryCallback}
+                                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                                            >
+                                                <RefreshCw className="w-3 h-3 inline mr-1" />
+                                                {t('characterCreator.retry')}
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => setGenerationError(null)}
+                                            className="text-red-400 hover:text-red-300 transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {selectedCharacter ? (
                             <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                                 <div className="flex items-center justify-between mb-6">
@@ -909,8 +1048,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                         )}
                                     </div>
 
-                                    {/* Basic Image Generation Options */}
-                                    {/* Model Selection for Basic References */}
+                                    {/* Image Generation Model Selection */}
                                     <div className="mb-4">
                                         <h4 className="text-sm font-semibold text-gray-300 mb-2">Image Generation Model</h4>
                                         <div className="ml-4 mb-3">
@@ -929,42 +1067,6 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                                     <option value="flux-pro">Flux Pro</option>
                                                 </optgroup>
                                             </select>
-                                        </div>
-                                    </div>
-
-                                    {/* Basic Image Generation Options */}
-                                    <div className="mb-4">
-                                        <h4 className="text-sm font-semibold text-gray-300 mb-2">Character References</h4>
-                                        <div className="space-y-2 ml-4">
-                                            {/* Full Body Reference Checkbox */}
-                                            <label className="flex items-center space-x-3 text-white cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={imageGenerationOptions.fullBodyReference}
-                                                    onChange={(e) => setImageGenerationOptions({
-                                                        ...imageGenerationOptions,
-                                                        fullBodyReference: e.target.checked
-                                                    })}
-                                                    className="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 bg-gray-700"
-                                                />
-                                                <Camera className="w-4 h-4 text-purple-400" />
-                                                <span>{t('characterCreator.fullBodyReference')}</span>
-                                            </label>
-
-                                            {/* Headshot Checkbox */}
-                                            <label className="flex items-center space-x-3 text-white cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={imageGenerationOptions.headshot}
-                                                    onChange={(e) => setImageGenerationOptions({
-                                                        ...imageGenerationOptions,
-                                                        headshot: e.target.checked
-                                                    })}
-                                                    className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 bg-gray-700"
-                                                />
-                                                <Camera className="w-4 h-4 text-blue-400" />
-                                                <span>{t('characterCreator.headshot')}</span>
-                                            </label>
                                         </div>
                                     </div>
 
@@ -1078,19 +1180,19 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     {/* Unified Generation Button */}
                                     <button
                                         onClick={handleGenerateAll}
-                                        disabled={isGeneratingAI || isGenerating || (!imageGenerationOptions.fullBodyReference && !imageGenerationOptions.headshot && !aiGenerationEnabled.generate3D && !aiGenerationEnabled.generateDigitalHuman)}
+                                        disabled={isGeneratingAI || isGenerating}
                                         className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-600 transition-all flex items-center justify-center space-x-2 font-semibold"
                                     >
                                         {(isGeneratingAI || isGenerating) ? (
                                             <>
                                                 <RefreshCw className="w-5 h-5 animate-spin" />
-                                                <span>Generating Character Assets...</span>
+                                                <span>Generating Character Images...</span>
                                             </>
                                         ) : (
                                             <>
                                                 <Sparkles className="w-5 h-5" />
-                                                <span>Generate Selected Options</span>
-                                                <Box className="w-5 h-5" />
+                                                <span>Generate Character Images</span>
+                                                <Camera className="w-5 h-5" />
                                             </>
                                         )}
                                     </button>
@@ -1103,53 +1205,103 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                             <Box className="w-5 h-5" />
                                             <span>3D Model Viewer (Gaussian Splatting)</span>
                                         </h3>
-                                        <div
-                                            ref={setRendererContainer}
-                                            className="w-full h-96 bg-gray-900 rounded-lg border border-gray-700"
-                                        />
+                                        <div className="relative">
+                                            <div
+                                                ref={setRendererContainer}
+                                                className="w-full h-96 bg-gray-900 rounded-lg border border-gray-700"
+                                            />
+                                            {/* 3D Loading State */}
+                                            {isLoading3D && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-lg">
+                                                    <div className="text-center">
+                                                        <RefreshCw className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
+                                                        <span className="text-gray-300">Loading 3D model...</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {/* 3D Error State */}
+                                            {render3DError && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-lg">
+                                                    <div className="text-center p-4">
+                                                        <X className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                                                        <p className="text-red-400 text-sm">Failed to load 3D model</p>
+                                                        <p className="text-gray-500 text-xs mt-1">{render3DError}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* Generated Images Gallery */}
-                                <div className="space-y-4">
-                                    {selectedCharacter.fullBodyReference && (
-                                        <div>
-                                            <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.fullBodyReference')}</h4>
-                                            <img 
-                                                src={selectedCharacter.fullBodyReference} 
-                                                alt="Full Body Reference"
-                                                className="w-full max-w-md rounded-lg"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {selectedCharacter.headShotReference && (
-                                        <div>
-                                            <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.headshot')}</h4>
-                                            <img 
-                                                src={selectedCharacter.headShotReference} 
-                                                alt="Headshot Reference"
-                                                className="w-full max-w-md rounded-lg"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {selectedCharacter.generatedImages && selectedCharacter.generatedImages.length > 0 && (
-                                        <div>
-                                            <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.additionalGeneratedImages')}</h4>
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                                {selectedCharacter.generatedImages.map((img, idx) => (
-                                                    <img 
-                                                        key={idx}
-                                                        src={img} 
-                                                        alt={`Generated ${idx}`}
-                                                        className="w-full rounded-lg"
+                                {/* Three-Panel Image Gallery */}
+                                {(selectedCharacter.fullBodyImage || selectedCharacter.frontFaceImage || selectedCharacter.angleFaceImage || selectedCharacter.fullBodyReference || selectedCharacter.headShotReference) && (
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        {/* Left Panel - Full Body Image */}
+                                        {(selectedCharacter.fullBodyImage || selectedCharacter.fullBodyReference) && (
+                                            <div className="lg:row-span-2">
+                                                <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.fullBodyReference')}</h4>
+                                                <div className="bg-gray-900 rounded-lg p-2 border border-gray-700">
+                                                    <img
+                                                        src={selectedCharacter.fullBodyImage || selectedCharacter.fullBodyReference}
+                                                        alt="Full Body Reference"
+                                                        className="w-full h-full object-contain rounded-lg"
+                                                        style={{ maxHeight: '600px' }}
                                                     />
-                                                ))}
+                                                </div>
                                             </div>
+                                        )}
+
+                                        {/* Right Panel - Two Face Images */}
+                                        <div className="space-y-4">
+                                            {/* Top Right - Front Face */}
+                                            {(selectedCharacter.frontFaceImage || selectedCharacter.headShotReference) && (
+                                                <div>
+                                                    <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.frontFace')}</h4>
+                                                    <div className="bg-gray-900 rounded-lg p-2 border border-gray-700">
+                                                        <img
+                                                            src={selectedCharacter.frontFaceImage || selectedCharacter.headShotReference}
+                                                            alt="Front Face (Passport Style)"
+                                                            className="w-full h-full object-contain rounded-lg"
+                                                            style={{ maxHeight: '290px' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Bottom Right - 45-degree Face */}
+                                            {selectedCharacter.angleFaceImage && (
+                                                <div>
+                                                    <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.angleFace')}</h4>
+                                                    <div className="bg-gray-900 rounded-lg p-2 border border-gray-700">
+                                                        <img
+                                                            src={selectedCharacter.angleFaceImage}
+                                                            alt="45-Degree Angle Face"
+                                                            className="w-full h-full object-contain rounded-lg"
+                                                            style={{ maxHeight: '290px' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
+
+                                {/* Legacy generated images if any */}
+                                {selectedCharacter.generatedImages && selectedCharacter.generatedImages.length > 0 && (
+                                    <div className="mt-4">
+                                        <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.additionalGeneratedImages')}</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                            {selectedCharacter.generatedImages.map((img, idx) => (
+                                                <img
+                                                    key={idx}
+                                                    src={img}
+                                                    alt={`Generated ${idx}`}
+                                                    className="w-full rounded-lg"
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="bg-gray-800 rounded-lg p-12 border border-gray-700 text-center">

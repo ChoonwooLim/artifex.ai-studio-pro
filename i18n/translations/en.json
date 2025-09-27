@@ -56,6 +56,9 @@
     "add": "Add",
     "fullBodyReference": "Full Body Reference",
     "headshot": "Headshot",
+    "frontFace": "Front Face (Passport Style)",
+    "angleFace": "45-Degree Angle Face",
+    "generatingImages": "Generating character images...",
     "imageModel": "Image Generation Model",
     "generateImage": "Generate Image",
     "generatingImage": "Generating image...",
@@ -67,7 +70,14 @@
     "importCharacter": "Import Character",
     "selectOrCreate": "Select a character or create a new one",
     "viewMode": "Change View Mode",
-    "applyPreset": "Apply Preset"
+    "applyPreset": "Apply Preset",
+    "retry": "Retry",
+    "replaceMode": "Replace existing content",
+    "appendMode": "Append to existing content",
+    "aiGenerationFailed": "AI generation failed",
+    "generationFailed": "Generation failed",
+    "imageGenerationFailed": "Image generation failed",
+    "cannotReadCharacterFile": "Cannot read character file"
   },
   "inputForm": {
     "productName": "Product Name",
