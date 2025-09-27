@@ -81,6 +81,8 @@ export interface Character {
     id: string;
     name: string;
     role: 'protagonist' | 'supporting' | 'extra';
+    gender?: 'male' | 'female' | 'neutral';
+    characterType?: 'human' | 'animal' | 'fantasy' | 'robot' | 'alien';
     physicalDescription: string;
     clothingDescription: string;
     personalityTraits?: string;

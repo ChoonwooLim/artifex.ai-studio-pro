@@ -126,6 +126,8 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     const [newCharacter, setNewCharacter] = useState<Partial<CharacterWithExtras>>({
         name: '',
         role: 'supporting',
+        gender: 'neutral',
+        characterType: 'human',
         physicalDescription: '',
         clothingDescription: '',
         personalityTraits: '',
@@ -217,6 +219,8 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 id: `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 name: newCharacter.name,
                 role: newCharacter.role as Character['role'],
+                gender: newCharacter.gender as Character['gender'] || 'neutral',
+                characterType: newCharacter.characterType as Character['characterType'] || 'human',
                 physicalDescription: newCharacter.physicalDescription,
                 clothingDescription: newCharacter.clothingDescription || '',
                 personalityTraits: newCharacter.personalityTraits,
@@ -224,12 +228,14 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 identityMarkers: [],
                 generatedImages: []
             };
-            
+
             setCharacters([...characters, character]);
             setSelectedCharacter(character);
             setNewCharacter({
                 name: '',
                 role: 'supporting',
+                gender: 'neutral',
+                characterType: 'human',
                 physicalDescription: '',
                 clothingDescription: '',
                 personalityTraits: '',
@@ -380,35 +386,143 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
             setGenerationProgress(t('characterCreator.generatingImages'));
 
-            // 1. Generate full body image (왼쪽)
-            const fullBodyPrompt = `Full body portrait, standing pose, complete view from head to toe, ${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}, soft studio lighting, simple gradient background, clean studio backdrop with subtle color gradation, no film frames, no decorations, no props, minimal background, pure background only`;
-            console.log(`Generating full body with model: ${generation2DOptions.model}`);
-            const fullBodyImages = await aiService.generateImage({
-                prompt: fullBodyPrompt,
-                model: generation2DOptions.model,
-                count: 1
-            });
-            updatedCharacter.fullBodyImage = fullBodyImages[0];
+            // Create a highly detailed consistent character description for all three images
+            // This ensures the EXACT SAME person appears in all images
+            const characterName = selectedCharacter.name || 'character';
+            const gender = selectedCharacter.gender || 'neutral';
+            const characterType = selectedCharacter.characterType || 'human';
 
-            // 2. Generate front face image (오른쪽 상단 - 여권 사진 스타일)
-            const frontFacePrompt = `Professional passport photo style, straight front facing portrait, neutral expression, looking directly at camera, centered face, shoulders visible, ${selectedCharacter.physicalDescription}, ${styleModifier}, even lighting, simple gradient background, clean studio backdrop with subtle color gradation, no shadows, no film frames, no decorations, minimal background, pure background only`;
-            console.log(`Generating front face with model: ${generation2DOptions.model}`);
-            const frontFaceImages = await aiService.generateImage({
-                prompt: frontFacePrompt,
-                model: generation2DOptions.model,
-                count: 1
-            });
-            updatedCharacter.frontFaceImage = frontFaceImages[0];
+            // Build character type descriptor
+            const characterTypeDesc = characterType === 'human' ? 'human'
+                : characterType === 'animal' ? 'anthropomorphic bipedal animal character'
+                : characterType === 'fantasy' ? 'fantasy bipedal creature'
+                : characterType === 'robot' ? 'humanoid robot'
+                : characterType === 'alien' ? 'bipedal alien being'
+                : 'character';
+
+            // Build gender descriptor
+            const genderDesc = gender === 'male' ? 'male'
+                : gender === 'female' ? 'female'
+                : 'neutral gender';
+
+            // Extract key features from physical description for consistency
+            const physicalDetails = selectedCharacter.physicalDescription || '';
+            const clothingDetails = selectedCharacter.clothingDescription || 'casual outfit';
+
+            // Parse physical description to extract hair color, skin tone, etc.
+            const hairMatch = physicalDetails.match(/(\w+\s+hair|hair\s+\w+|\w+\s+hairstyle)/i);
+            const skinMatch = physicalDetails.match(/(\w+\s+skin|skin\s+\w+)/i);
+            const ageMatch = physicalDetails.match(/(young|old|middle-aged|teen|adult|child)/i);
+            const eyeMatch = physicalDetails.match(/(\w+\s+eyes|eyes\s+\w+)/i);
+
+            const hairDesc = hairMatch ? hairMatch[0] : 'short dark hair';
+            const skinDesc = skinMatch ? skinMatch[0] : 'fair skin';
+            const ageDesc = ageMatch ? ageMatch[0] : 'adult';
+            const eyeDesc = eyeMatch ? eyeMatch[0] : 'brown eyes';
+
+            // Create EXTREMELY detailed and consistent character description
+            // This exact description will be used in ALL three images
+            const detailedCharacterDesc = `${ageDesc} ${genderDesc} ${characterTypeDesc} named ${characterName}, EXACT FEATURES: ${hairDesc}, ${eyeDesc}, ${skinDesc}, ${physicalDetails}`;
+
+            // Create the consistent base that includes EVERYTHING about the character
+            // Including clothing to ensure same outfit in all images
+            const consistentCharacterBase = `CHARACTER: ${detailedCharacterDesc}, wearing ${clothingDetails}`;
+
+            // Add a unique identifier to help maintain consistency
+            const consistencyTag = `[Character ID: ${characterName}_${Date.now() % 10000}]`;
+
+            // Track failed generations
+            const failedImages: string[] = [];
+
+            // Generate front face FIRST as reference for consistency
+            let frontFaceGenerated = false;
+            let enhancedCharacterBase = consistentCharacterBase;
+
+            // 1. Generate front face image FIRST (오른쪽 상단 - 여권 사진 스타일)
+            try {
+                const frontFacePrompt = `SINGLE FACE PORTRAIT: ${consistentCharacterBase}, ONE person only, close-up portrait showing ONLY ONE face looking straight at camera, NO multiple views, NO side profiles, JUST ONE frontal face centered in frame, head and shoulders of ONE person, ${styleModifier}, even lighting, neutral expression, plain background, professional headshot style`;
+                console.log(`Generating front face FIRST with model: ${generation2DOptions.model}`);
+                const frontFaceImages = await aiService.generateImage({
+                    prompt: frontFacePrompt,
+                    model: generation2DOptions.model,
+                    width: 1024,
+                    height: 1024,
+                    count: 1
+                });
+                updatedCharacter.frontFaceImage = frontFaceImages[0];
+                frontFaceGenerated = true;
+
+                // Update the character base with successful generation details
+                enhancedCharacterBase = `${consistentCharacterBase}`;
+                setGenerationProgress(t('characterCreator.faceGeneratedGeneratingBody'));
+            } catch (error) {
+                console.error('Failed to generate front face image:', error);
+                failedImages.push('front face');
+            }
+
+            // 2. Generate full body image USING face reference (왼쪽) - 1:2 aspect ratio (portrait)
+            if (frontFaceGenerated) {
+                try {
+                    // Add specific posture instructions based on character type
+                    const postureDesc = characterType === 'human' ? 'human person standing upright on two feet'
+                        : characterType === 'animal' ? 'anthropomorphic bipedal animal character standing upright on hind legs in human-like vertical pose'
+                        : characterType === 'robot' ? 'humanoid robot standing upright in vertical pose on two legs'
+                        : characterType === 'fantasy' ? 'fantasy creature standing upright on two legs in vertical pose'
+                        : characterType === 'alien' ? 'alien being standing upright in bipedal vertical pose'
+                        : 'bipedal character standing vertically on two legs';
+
+                    const fullBodyPrompt = `SINGLE PERSON STANDING: ${enhancedCharacterBase}, ONLY ONE person standing alone, NO multiple people, NO front and back views, JUST ONE character facing forward, ${postureDesc}, complete full body from head to toe, single figure centered in vertical frame, standing upright on ground, ${styleModifier}, studio photography, plain background, tall portrait 1:2 ratio, ONE person only in the entire image`;
+                    console.log(`Generating full body using face reference with model: ${generation2DOptions.model}`);
+                    const fullBodyImages = await aiService.generateImage({
+                        prompt: fullBodyPrompt,
+                        model: generation2DOptions.model,
+                        width: 1024,  // DALL-E 3 portrait size
+                        height: 1792, // DALL-E 3 portrait size (1:1.75 ratio, close to 1:2)
+                        count: 1
+                    });
+                    updatedCharacter.fullBodyImage = fullBodyImages[0];
+                } catch (error) {
+                    console.error('Failed to generate full body image:', error);
+                    failedImages.push('full body');
+                }
+            } else {
+                console.warn('Skipping full body generation since face generation failed');
+                failedImages.push('full body (skipped)');
+            }
 
             // 3. Generate 45-degree angle face image (오른쪽 하단)
-            const angleFacePrompt = `Natural portrait, face turned 45 degrees to the side, three-quarter view, relaxed expression, ${selectedCharacter.physicalDescription}, ${styleModifier}, soft directional lighting, simple gradient background, clean studio backdrop with subtle color gradation, no film frames, no decorations, minimal background, pure background only`;
-            console.log(`Generating angle face with model: ${generation2DOptions.model}`);
-            const angleFaceImages = await aiService.generateImage({
-                prompt: angleFacePrompt,
-                model: generation2DOptions.model,
-                count: 1
-            });
-            updatedCharacter.angleFaceImage = angleFaceImages[0];
+            if (frontFaceGenerated) {
+                try {
+                    const angleFacePrompt = `SINGLE ANGLED FACE: ${enhancedCharacterBase}, ONE face only slightly turned to the right about 45 degrees, NO multiple faces, NO three views, JUST ONE single face at angle, close-up portrait of ONE person, head and shoulders visible, ${styleModifier}, dramatic side lighting, gradient background, ONLY ONE face in the entire image`;
+                    console.log(`Generating angle face using face reference with model: ${generation2DOptions.model}`);
+                    const angleFaceImages = await aiService.generateImage({
+                        prompt: angleFacePrompt,
+                        model: generation2DOptions.model,
+                        width: 1024,
+                        height: 1024,
+                        count: 1
+                    });
+                    updatedCharacter.angleFaceImage = angleFaceImages[0];
+                } catch (error) {
+                    console.error('Failed to generate angle face image:', error);
+                    failedImages.push('angle face');
+                }
+            } else {
+                console.warn('Skipping angle face generation since face generation failed');
+                failedImages.push('angle face (skipped)');
+            }
+
+            // Report which images failed (if any)
+            if (failedImages.length > 0) {
+                console.warn(`Some images could not be generated: ${failedImages.join(', ')}`);
+                setGenerationError({
+                    message: `${t('characterCreator.partialSuccess')}: ${failedImages.join(', ')} ${t('characterCreator.couldNotGenerate')}`,
+                    retryCallback: () => {
+                        setGenerationError(null);
+                        handleGenerateAll();
+                    }
+                });
+            }
 
             // Generate AI-powered content if selected and generator is available
             if (hasAIOptions && aiGenerator) {
@@ -808,6 +922,40 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                         </select>
                                     </div>
 
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">
+                                                {t('characterCreator.gender')}
+                                            </label>
+                                            <select
+                                                value={newCharacter.gender || 'neutral'}
+                                                onChange={(e) => setNewCharacter({ ...newCharacter, gender: e.target.value as Character['gender'] })}
+                                                className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                            >
+                                                <option value="male">{t('characterCreator.male')}</option>
+                                                <option value="female">{t('characterCreator.female')}</option>
+                                                <option value="neutral">{t('characterCreator.neutral')}</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">
+                                                {t('characterCreator.characterType')}
+                                            </label>
+                                            <select
+                                                value={newCharacter.characterType || 'human'}
+                                                onChange={(e) => setNewCharacter({ ...newCharacter, characterType: e.target.value as Character['characterType'] })}
+                                                className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                            >
+                                                <option value="human">{t('characterCreator.human')}</option>
+                                                <option value="animal">{t('characterCreator.animal')}</option>
+                                                <option value="fantasy">{t('characterCreator.fantasy')}</option>
+                                                <option value="robot">{t('characterCreator.robot')}</option>
+                                                <option value="alien">{t('characterCreator.alien')}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">
                                             {t('characterCreator.characterStyle')}
@@ -975,7 +1123,11 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                 <div className="flex items-center justify-between mb-6">
                                     <div>
                                         <h2 className="text-2xl font-bold text-white">{selectedCharacter.name}</h2>
-                                        <p className="text-gray-400">{selectedCharacter.role}</p>
+                                        <p className="text-gray-400">
+                                            {t(`characterCreator.${selectedCharacter.role}`)} •
+                                            {t(`characterCreator.${selectedCharacter.gender || 'neutral'}`)} •
+                                            {t(`characterCreator.${selectedCharacter.characterType || 'human'}`)}
+                                        </p>
                                     </div>
                                     
                                     <div className="flex items-center space-x-2">
@@ -998,6 +1150,49 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                 </div>
 
                                 
+
+                                {/* Character Basic Info */}
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                                            {t('characterCreator.gender')}
+                                        </label>
+                                        <select
+                                            value={selectedCharacter.gender || 'neutral'}
+                                            onChange={(e) => {
+                                                const updated = { ...selectedCharacter, gender: e.target.value as Character['gender'] };
+                                                handleUpdateCharacter(updated);
+                                                setSelectedCharacter(updated);
+                                            }}
+                                            className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                        >
+                                            <option value="male">{t('characterCreator.male')}</option>
+                                            <option value="female">{t('characterCreator.female')}</option>
+                                            <option value="neutral">{t('characterCreator.neutral')}</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                                            {t('characterCreator.characterType')}
+                                        </label>
+                                        <select
+                                            value={selectedCharacter.characterType || 'human'}
+                                            onChange={(e) => {
+                                                const updated = { ...selectedCharacter, characterType: e.target.value as Character['characterType'] };
+                                                handleUpdateCharacter(updated);
+                                                setSelectedCharacter(updated);
+                                            }}
+                                            className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
+                                        >
+                                            <option value="human">{t('characterCreator.human')}</option>
+                                            <option value="animal">{t('characterCreator.animal')}</option>
+                                            <option value="fantasy">{t('characterCreator.fantasy')}</option>
+                                            <option value="robot">{t('characterCreator.robot')}</option>
+                                            <option value="alien">{t('characterCreator.alien')}</option>
+                                        </select>
+                                    </div>
+                                </div>
 
                                 {/* Character Details */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -1233,55 +1428,55 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     </div>
                                 )}
 
-                                {/* Three-Panel Image Gallery */}
+                                {/* Three-Panel Image Gallery - Equal Width Columns */}
                                 {(selectedCharacter.fullBodyImage || selectedCharacter.frontFaceImage || selectedCharacter.angleFaceImage || selectedCharacter.fullBodyReference || selectedCharacter.headShotReference) && (
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        {/* Left Panel - Full Body Image */}
+                                        {/* Left Panel - Full Body Image (1:2 ratio, fills container) */}
                                         {(selectedCharacter.fullBodyImage || selectedCharacter.fullBodyReference) && (
-                                            <div className="lg:row-span-2">
+                                            <div className="flex flex-col">
                                                 <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.fullBodyReference')}</h4>
-                                                <div className="bg-gray-900 rounded-lg p-2 border border-gray-700">
+                                                <div className="bg-gray-900 rounded-lg border border-gray-700 relative" style={{ paddingBottom: '200%' }}>
                                                     <img
                                                         src={selectedCharacter.fullBodyImage || selectedCharacter.fullBodyReference}
-                                                        alt="Full Body Reference"
-                                                        className="w-full h-full object-contain rounded-lg"
-                                                        style={{ maxHeight: '600px' }}
+                                                        alt="Full Body Reference (1:2 ratio)"
+                                                        className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                                                        style={{ objectPosition: 'center top' }}
                                                     />
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Right Panel - Two Face Images */}
-                                        <div className="space-y-4">
-                                            {/* Top Right - Front Face */}
-                                            {(selectedCharacter.frontFaceImage || selectedCharacter.headShotReference) && (
-                                                <div>
-                                                    <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.frontFace')}</h4>
-                                                    <div className="bg-gray-900 rounded-lg p-2 border border-gray-700">
-                                                        <img
-                                                            src={selectedCharacter.frontFaceImage || selectedCharacter.headShotReference}
-                                                            alt="Front Face (Passport Style)"
-                                                            className="w-full h-full object-contain rounded-lg"
-                                                            style={{ maxHeight: '290px' }}
-                                                        />
+                                        {/* Right Panel - Two Face Images (square) */}
+                                        <div className="flex flex-col h-full">
+                                            <div className="flex-1 grid grid-rows-2 gap-4">
+                                                {/* Top Right - Front Face */}
+                                                {(selectedCharacter.frontFaceImage || selectedCharacter.headShotReference) && (
+                                                    <div className="flex flex-col">
+                                                        <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.frontFace')}</h4>
+                                                        <div className="bg-gray-900 rounded-lg border border-gray-700 relative flex-1" style={{ paddingBottom: '95%' }}>
+                                                            <img
+                                                                src={selectedCharacter.frontFaceImage || selectedCharacter.headShotReference}
+                                                                alt="Front Face (Passport Style)"
+                                                                className="absolute inset-0 w-full h-full object-contain rounded-lg p-2"
+                                                            />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
 
-                                            {/* Bottom Right - 45-degree Face */}
-                                            {selectedCharacter.angleFaceImage && (
-                                                <div>
-                                                    <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.angleFace')}</h4>
-                                                    <div className="bg-gray-900 rounded-lg p-2 border border-gray-700">
-                                                        <img
-                                                            src={selectedCharacter.angleFaceImage}
-                                                            alt="45-Degree Angle Face"
-                                                            className="w-full h-full object-contain rounded-lg"
-                                                            style={{ maxHeight: '290px' }}
-                                                        />
+                                                {/* Bottom Right - 45-degree Face */}
+                                                {selectedCharacter.angleFaceImage && (
+                                                    <div className="flex flex-col">
+                                                        <h4 className="text-sm font-medium text-gray-300 mb-2">{t('characterCreator.angleFace')}</h4>
+                                                        <div className="bg-gray-900 rounded-lg border border-gray-700 relative flex-1" style={{ paddingBottom: '95%' }}>
+                                                            <img
+                                                                src={selectedCharacter.angleFaceImage}
+                                                                alt="45-Degree Angle Face"
+                                                                className="absolute inset-0 w-full h-full object-contain rounded-lg p-2"
+                                                            />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
