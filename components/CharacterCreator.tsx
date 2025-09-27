@@ -104,6 +104,8 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
         rigging: true,
         animations: ['idle', 'walk', 'run']
     });
+    const [manualFeatures, setManualFeatures] = useState<string>('');
+    const [showFeatureRefinement, setShowFeatureRefinement] = useState(false);
     const [digitalHumanOptions, setDigitalHumanOptions] = useState<DigitalHumanOptions>({
         provider: 'did-agents-2',
         voice: 'en-US-Neural',
@@ -409,27 +411,33 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             const physicalDetails = selectedCharacter.physicalDescription || '';
             const clothingDetails = selectedCharacter.clothingDescription || 'casual outfit';
 
-            // Parse physical description to extract hair color, skin tone, etc.
+            // Extract VERY specific features for consistency
             const hairMatch = physicalDetails.match(/(\w+\s+hair|hair\s+\w+|\w+\s+hairstyle)/i);
             const skinMatch = physicalDetails.match(/(\w+\s+skin|skin\s+\w+)/i);
             const ageMatch = physicalDetails.match(/(young|old|middle-aged|teen|adult|child)/i);
             const eyeMatch = physicalDetails.match(/(\w+\s+eyes|eyes\s+\w+)/i);
 
-            const hairDesc = hairMatch ? hairMatch[0] : 'short dark hair';
-            const skinDesc = skinMatch ? skinMatch[0] : 'fair skin';
-            const ageDesc = ageMatch ? ageMatch[0] : 'adult';
-            const eyeDesc = eyeMatch ? eyeMatch[0] : 'brown eyes';
+            // Create ultra-specific descriptions
+            const hairDesc = hairMatch ? hairMatch[0] : 'straight black shoulder-length hair';
+            const skinDesc = skinMatch ? skinMatch[0] : 'light beige skin';
+            const ageDesc = ageMatch ? ageMatch[0] : '25-year-old';
+            const eyeDesc = eyeMatch ? eyeMatch[0] : 'dark brown almond-shaped eyes';
 
-            // Create EXTREMELY detailed and consistent character description
-            // This exact description will be used in ALL three images
-            const detailedCharacterDesc = `${ageDesc} ${genderDesc} ${characterTypeDesc} named ${characterName}, EXACT FEATURES: ${hairDesc}, ${eyeDesc}, ${skinDesc}, ${physicalDetails}`;
+            // Add more specific facial features
+            const faceShape = 'oval face shape';
+            const noseDesc = 'straight narrow nose';
+            const lipDesc = 'medium-sized lips';
+            const browsDesc = 'medium thickness straight eyebrows';
 
-            // Create the consistent base that includes EVERYTHING about the character
-            // Including clothing to ensure same outfit in all images
-            const consistentCharacterBase = `CHARACTER: ${detailedCharacterDesc}, wearing ${clothingDetails}`;
+            // Create ULTRA-SPECIFIC character description with exact measurements and details
+            const detailedCharacterDesc = `EXACT SAME ${ageDesc} ${genderDesc} ${characterTypeDesc}, PRECISE FEATURES: ${faceShape}, ${hairDesc} with center part, ${eyeDesc}, ${browsDesc} matching hair color, ${noseDesc}, ${lipDesc}, ${skinDesc}, distinctive features: ${physicalDetails}`;
 
-            // Add a unique identifier to help maintain consistency
-            const consistencyTag = `[Character ID: ${characterName}_${Date.now() % 10000}]`;
+            // Create the consistent base with extreme detail
+            const consistentCharacterBase = `IDENTICAL CHARACTER [Unique ID #${Date.now() % 10000}]: ${detailedCharacterDesc}, wearing EXACT outfit: ${clothingDetails}. CRITICAL: Generate the EXACT SAME individual, not similar-looking different people`;
+
+            // Create a consistency seed for this character
+            const characterSeed = Math.floor(Math.random() * 1000000);
+            const consistencyTag = `[Consistent Character #${characterSeed}]`;
 
             // Track failed generations
             const failedImages: string[] = [];
@@ -438,9 +446,9 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             let frontFaceGenerated = false;
             let enhancedCharacterBase = consistentCharacterBase;
 
-            // 1. Generate front face image FIRST (오른쪽 상단 - 여권 사진 스타일)
+            // 1. Generate front face image FIRST (오른쫜 상단 - 여권 사진 스타일)
             try {
-                const frontFacePrompt = `SINGLE FACE PORTRAIT: ${consistentCharacterBase}, ONE person only, close-up portrait showing ONLY ONE face looking straight at camera, NO multiple views, NO side profiles, JUST ONE frontal face centered in frame, head and shoulders of ONE person, ${styleModifier}, even lighting, neutral expression, plain background, professional headshot style`;
+                const frontFacePrompt = `professional ID photo portrait, ${consistentCharacterBase}, single person headshot, direct front-facing camera angle, centered composition, ${styleModifier}, studio lighting, neutral expression, plain white background, photorealistic detail`;
                 console.log(`Generating front face FIRST with model: ${generation2DOptions.model}`);
                 const frontFaceImages = await aiService.generateImage({
                     prompt: frontFacePrompt,
@@ -452,8 +460,11 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 updatedCharacter.frontFaceImage = frontFaceImages[0];
                 frontFaceGenerated = true;
 
-                // Update the character base with successful generation details
-                enhancedCharacterBase = `${consistentCharacterBase}`;
+                // Add manual features if provided
+                const additionalFeatures = manualFeatures ? `, ADDITIONAL DETAILS: ${manualFeatures}` : '';
+
+                // Create enhanced description based on first image
+                enhancedCharacterBase = `${consistentCharacterBase}${additionalFeatures}, IMPORTANT: match the exact person from the ID photo - same face structure, same hairstyle, same skin tone, same age, same everything`;
                 setGenerationProgress(t('characterCreator.faceGeneratedGeneratingBody'));
             } catch (error) {
                 console.error('Failed to generate front face image:', error);
@@ -471,7 +482,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                         : characterType === 'alien' ? 'alien being standing upright in bipedal vertical pose'
                         : 'bipedal character standing vertically on two legs';
 
-                    const fullBodyPrompt = `SINGLE PERSON STANDING: ${enhancedCharacterBase}, ONLY ONE person standing alone, NO multiple people, NO front and back views, JUST ONE character facing forward, ${postureDesc}, complete full body from head to toe, single figure centered in vertical frame, standing upright on ground, ${styleModifier}, studio photography, plain background, tall portrait 1:2 ratio, ONE person only in the entire image`;
+                    const fullBodyPrompt = `full body portrait photography, ${enhancedCharacterBase}, single person standing straight, front-facing camera, ${postureDesc}, complete figure from head to toe, centered in frame, ${styleModifier}, studio lighting, plain white background, photorealistic, vertical composition`;
                     console.log(`Generating full body using face reference with model: ${generation2DOptions.model}`);
                     const fullBodyImages = await aiService.generateImage({
                         prompt: fullBodyPrompt,
@@ -493,7 +504,7 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
             // 3. Generate 45-degree angle face image (오른쪽 하단)
             if (frontFaceGenerated) {
                 try {
-                    const angleFacePrompt = `SINGLE ANGLED FACE: ${enhancedCharacterBase}, ONE face only slightly turned to the right about 45 degrees, NO multiple faces, NO three views, JUST ONE single face at angle, close-up portrait of ONE person, head and shoulders visible, ${styleModifier}, dramatic side lighting, gradient background, ONLY ONE face in the entire image`;
+                    const angleFacePrompt = `three-quarter angle portrait photography, ${enhancedCharacterBase}, single person headshot, face turned 30-45 degrees right, showing left side of face more, ${styleModifier}, professional lighting, plain background, photorealistic detail`;
                     console.log(`Generating angle face using face reference with model: ${generation2DOptions.model}`);
                     const angleFaceImages = await aiService.generateImage({
                         prompt: angleFacePrompt,
@@ -1425,6 +1436,28 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                                 </div>
                                             )}
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Manual Feature Refinement for Better Consistency */}
+                                {selectedCharacter.frontFaceImage && !selectedCharacter.fullBodyImage && !selectedCharacter.angleFaceImage && (
+                                    <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4 mb-6">
+                                        <h4 className="text-yellow-400 font-medium mb-2">🎯 {t('characterCreator.improveConsistency', 'Improve Character Consistency')}</h4>
+                                        <p className="text-gray-400 text-sm mb-3">
+                                            {t('characterCreator.refineFeatures', '첫 번째 이미지를 보고 더 구체적인 특징을 입력하면 일관성이 향상됩니다')}
+                                        </p>
+                                        <textarea
+                                            value={manualFeatures}
+                                            onChange={(e) => setManualFeatures(e.target.value)}
+                                            placeholder={t('characterCreator.featurePlaceholder', '예: 검은색 짧은 단발머리, 갈색 눈, 둥근 얼굴형, 작은 코, 검은색 가죽 재킷...')}
+                                            className="w-full h-20 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm"
+                                        />
+                                        <button
+                                            onClick={handleGenerateAll}
+                                            className="mt-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm transition-colors"
+                                        >
+                                            {t('characterCreator.regenerateWithFeatures', '특징 적용하여 나머지 생성')}
+                                        </button>
                                     </div>
                                 )}
 
