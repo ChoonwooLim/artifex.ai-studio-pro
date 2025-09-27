@@ -139,76 +139,138 @@ Basic Mode의 모든 기능을 유지하면서 Professional Mode를 통해 고�
 
 ### 핵심 기능
 - **🔧 Orchestrator**: 작업 관리 및 SLO 모니터링
-- **🎨 Multi-Modal Adapters**: Image, Video, 3D, Gaussian 어댑터
-- **🔒 Consistency Engine 2.0**: 캐릭터 일관성 점수 0.92+ 보장
-- **🎮 UE5 Export**: Epic Mannequin 호환, LOD 지원
-- **📜 Rights Management**: C2PA 서명 + 워터마크
-- **📊 SLO Dashboard**: 실시간 성능 모니터링
+- **🎨 Multi-Modal Adapters**: Image (Midjourney/Flux/OpenAI), Video (Veo/Runway/Pika), 3D (CSM/Meshy/Luma), Gaussian
+- **🔒 Consistency Engine 2.0**: 얼굴/스타일/형상 임베딩, 일관성 점수 0.92+ 보장
+- **🎮 UE5 Export**: FBX/GLB/UDIM, Epic Mannequin 호환, LOD 5단계, Substrate 머티리얼
+- **📜 Rights Management**: C2PA 서명 + 비가시 워터마크 + 감사 로그
+- **📊 SLO Dashboard**: 실시간 메트릭 + Grafana + 자동 롤백
+- **🗄️ Dual Database**: Basic Mode (IndexedDB) / Professional Mode (PostgreSQL + pgvector)
 
 ### SLO (Service Level Objectives)
 ```typescript
 // constants/slo.constants.ts
 export const SLO_REQUIREMENTS = {
-  SUCCESS_RATE_WEEKLY: 0.97,      // 97% 이상
-  P95_CONCEPT_TO_3D_MIN: 4,       // 4분 이하
+  SUCCESS_RATE_WEEKLY: 0.97,      // 97% 이상 (필수)
+  P95_CONCEPT_TO_3D_MIN: 4,       // 4분 이하 (필수)
   CONSISTENCY_P50: 0.95,          // 중앙값 95%
-  CONSISTENCY_P90: 0.92,          // 90 백분위 92%
-  UE5_IMPORT_PASS: 1.0,          // 100% 성공
-  AVG_COST_USD_PER_CHAR: 2.5     // $2.5 이하
+  CONSISTENCY_P90: 0.92,          // 90 백분위 92% (필수)
+  UE5_IMPORT_PASS: 1.0,          // 100% 성공 (필수)
+  AVG_COST_USD_PER_CHAR: 2.5     // $2.5 이하 (필수)
 } as const;
+
+// SLO 미달 시 자동 롤백
+if (!checkSLOCompliance()) {
+  await rollback();
+  throw new Error("SLO violation - deployment blocked");
+}
 ```
 
 ### 통합 아키텍처
 ```
 components/CharacterCreator.tsx (탭 래퍼)
-├── Basic Mode (기존 유지)
+├── Basic Mode (기존 100% 유지)
 │   └── CharacterCreatorBasic.tsx
 ├── Professional Mode (신규)
-│   └── CharacterCreatorPro.tsx
+│   ├── CharacterCreatorPro.tsx
+│   ├── CharacterConsistencyPanelPro.tsx
+│   └── CharacterUE5ExporterPro.tsx
 └── SLO Dashboard (신규)
     └── CharacterSLOMonitorPro.tsx
 
 services/characterGeneration/
-├── [기존 파일들 - 수정 금지]
-└── codexrk/ (신규 디렉토리)
+├── aiCharacterGenerator.ts [수정 금지]
+├── gaussianSplattingRenderer.ts [수정 금지]
+├── [기타 기존 파일들 - 수정 금지]
+└── codexrk/ (신규 - 완전 격리)
     ├── orchestrator/
+    │   ├── CharacterOrchestrator.ts
+    │   ├── JobManager.ts
+    │   └── SLOEnforcer.ts
     ├── adapters/
+    │   ├── image/ (MidjourneyAdapter, FluxAdapter, etc.)
+    │   ├── video/ (VeoAdapter, RunwayAdapter, etc.)
+    │   ├── model3d/ (CSMAdapter, MeshyAdapter, etc.)
+    │   └── gaussian/ (GaussianAdapter)
     ├── consistency/
+    │   └── ConsistencyEngine.ts
     ├── exporters/
+    │   └── UE5Exporter.ts
     ├── rights/
+    │   ├── C2PAService.ts
+    │   └── WatermarkService.ts
     └── telemetry/
+        └── OpenTelemetry.ts
 ```
 
+### 구현 백로그 (13 Tasks)
+| Task | 내용 | 우선순위 | 상태 |
+|------|------|----------|------|
+| A-00 | 기존 코드 보호 (CharacterCreatorBasic.tsx) | P0 | 🔴 대기 |
+| A-01 | 디렉토리 구조 생성 + 탭 UI | P0 | 🔴 대기 |
+| A-02 | Orchestrator API 구현 | P1 | 🔴 대기 |
+| A-03 | Image Adapters (Mock 우선) | P1 | 🔴 대기 |
+| A-04 | 3D Model Adapters | P1 | 🔴 대기 |
+| A-05 | Video Adapters | P2 | 🔴 대기 |
+| A-06 | Gaussian Service 통합 | P2 | 🔴 대기 |
+| A-07 | Consistency Engine 2.0 | P1 | 🔴 대기 |
+| A-08 | UE5 Exporters | P1 | 🔴 대기 |
+| A-09 | Rights Management | P2 | 🔴 대기 |
+| A-10 | Registry & Telemetry | P2 | 🔴 대기 |
+| A-11 | E2E & Benchmark | P0 | 🔴 대기 |
+| A-12 | Security & Cost | P0 | 🔴 대기 |
+| A-13 | Documentation | P1 | 🔴 대기 |
+
 ### 개발 문서
-- **[IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md](./docs/features/IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md)**: v3.7.0 스펙 정의
-- **[CODEXRK_PROMPT.txt](./docs/features/CODEXRK_PROMPT.txt)**: 구현 지시문
-- **[TASKS_CODEXRK.md](./docs/features/TASKS_CODEXRK.md)**: 백로그 (A-00 ~ A-13)
-- **[INTEGRATION_GUIDE.md](./docs/features/INTEGRATION_GUIDE.md)**: 통합 패턴 가이드
-- **[CODEXRK_IMPLEMENTATION_CHECKLIST.md](./docs/features/CODEXRK_IMPLEMENTATION_CHECKLIST.md)**: 구현 체크리스트
+- **[IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md](./docs/features/IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md)**: v3.7.0 전체 스펙 (Character Creator 통합)
+- **[CODEXRK_PROMPT.txt](./docs/features/CODEXRK_PROMPT.txt)**: v2.0 구현 지시문 (기존 코드 보호 원칙)
+- **[TASKS_CODEXRK.md](./docs/features/TASKS_CODEXRK.md)**: v2.0 상세 백로그 (격리 경로 포함)
+- **[INTEGRATION_GUIDE.md](./docs/features/INTEGRATION_GUIDE.md)**: 통합 패턴 및 코드 예제
+- **[CODEXRK_IMPLEMENTATION_CHECKLIST.md](./docs/features/CODEXRK_IMPLEMENTATION_CHECKLIST.md)**: Phase별 체크리스트
 
 ### 구현 원칙
-1. **기존 코드 100% 보존**: Basic Mode 파일 수정 금지
-2. **완전 격리**: 모든 CODEXRK 코드는 codexrk/ 디렉토리에 작성
-3. **데이터 독립성**: Basic(IndexedDB) / Pro(PostgreSQL) 분리
-4. **UI 통합**: 탭 기반 모드 전환
-5. **SLO 준수**: 임계값 미달 시 자동 롤백
+1. **기존 코드 100% 보존**: Basic Mode 파일 절대 수정 금지
+2. **완전 격리**: 모든 CODEXRK 코드는 `codexrk/` 디렉토리에만 작성
+3. **데이터 독립성**: Basic(IndexedDB) / Pro(PostgreSQL) 완전 분리
+4. **UI 통합**: 탭 기반 모드 전환 (Basic/Professional/SLO)
+5. **SLO 준수**: 하드코딩된 임계값, 미달 시 자동 롤백
+6. **API 독립성**: `/api/v1/character/professional` 별도 엔드포인트
+7. **테스트 독립성**: Professional Mode 테스트 별도 실행
+8. **문서 우선**: 모든 변경사항 문서화 필수
 
 ### 시작하기
 ```bash
-# Phase 0: 사전 준비
+# Phase 0: 사전 준비 (필수)
 git checkout -b feature/codexrk-integration
 npm test  # 기존 테스트 100% 통과 확인
+cp components/CharacterCreator.tsx components/character/CharacterCreatorBasic.tsx
 
 # Phase 1: 기반 작업
-# 1. CharacterCreator.tsx를 CharacterCreatorBasic.tsx로 복사
-# 2. codexrk/ 디렉토리 구조 생성
-# 3. 탭 래퍼 구현
+mkdir -p services/characterGeneration/codexrk/{orchestrator,adapters,consistency,exporters,rights,telemetry}
+mkdir -p components/character
+touch constants/slo.constants.ts
+
+# Phase 2: Core 구현 (Mock 우선)
+# 1. Orchestrator API 구현
+# 2. Mock Adapters 구현
+# 3. Basic UI 통합
 
 # 개발 중 필수 체크
-npm run lint
-npm run typecheck
-npm test
+npm run lint        # 0 errors
+npm run typecheck   # 0 errors
+npm test           # 100% pass
 ```
+
+### 중요 경고사항
+⚠️ **절대 수정 금지 파일**:
+- `services/characterGeneration/aiCharacterGenerator.ts`
+- `services/characterGeneration/gaussianSplattingRenderer.ts`
+- `components/character/CharacterManager.tsx`
+- 기타 모든 기존 파일들
+
+✅ **신규 생성만 허용**:
+- `services/characterGeneration/codexrk/*` 하위 모든 파일
+- `components/character/*Pro.tsx` 패턴 파일
+- `constants/slo.constants.ts`
 
 ---
 
@@ -287,10 +349,29 @@ gantt
 ## 🎯 Active Development Plan
 
 ### Current Focus: CODEXRK Professional Mode Integration
-- **Primary Goal**: Character Creator에 Enterprise급 기능 통합
-- **Specification**: [IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md](./docs/features/IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md)
+- **Primary Goal**: Character Creator에 Enterprise급 기능 통합 (Basic Mode 100% 보존)
+- **Specification**: [IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md](./docs/features/IMAGE_3D_CHARACTER_GENERATION_CODEXRK.md) v3.7.0
 - **Implementation Checklist**: [CODEXRK_IMPLEMENTATION_CHECKLIST.md](./docs/features/CODEXRK_IMPLEMENTATION_CHECKLIST.md)
 - **Last Updated**: 2025-09-27
+
+### CODEXRK 개발자를 위한 Quick Guide
+```
+📌 핵심 원칙: "기존 코드는 절대 건드리지 않는다"
+
+✅ 해야 할 일:
+1. docs/features/CODEXRK_PROMPT.txt v2.0 읽고 지시사항 따르기
+2. docs/features/TASKS_CODEXRK.md v2.0에서 백로그 확인
+3. services/characterGeneration/codexrk/ 하위에만 코드 작성
+4. components/character/*Pro.tsx 패턴으로 UI 생성
+5. SLO 상수는 constants/slo.constants.ts에 하드코딩
+
+❌ 하지 말아야 할 일:
+1. aiCharacterGenerator.ts 수정 금지
+2. gaussianSplattingRenderer.ts 수정 금지
+3. 기존 Character Creator 파일 수정 금지
+4. IndexedDB 스키마 변경 금지
+5. 기존 API 엔드포인트 변경 금지
+```
 
 ### AI Model Integration (Ongoing)
 - **Master Plan**: [AI_MODEL_INTEGRATION_PLAN.md](./docs/ai-models/AI_MODEL_INTEGRATION_PLAN.md)
@@ -693,8 +774,10 @@ Error: CORS policy blocked
 
 ### Today (2025-09-27)
 - [ ] CODEXRK Phase 0: 사전 준비 시작
-- [ ] CharacterCreatorBasic.tsx 생성 및 테스트
-- [ ] codexrk/ 디렉토리 구조 생성
+  - [ ] 기존 테스트 실행 및 통과율 기록
+  - [ ] CharacterCreator.tsx → CharacterCreatorBasic.tsx 복사
+  - [ ] codexrk/ 디렉토리 구조 생성
+  - [ ] 문서 검토 (v3.7.0 스펙 숙독)
 
 ### This Week
 - [ ] 3개 이상 AI 제공자 통합 완료
@@ -725,27 +808,31 @@ Error: CORS policy blocked
 
 ---
 
-## 🎯 Next Steps
+## 🎯 Next Steps (CODEXRK v3.7.0 Integration Priority)
 
-1. **즉시 실행 (CODEXRK Integration)**:
-   - [ ] docs/features/CODEXRK_IMPLEMENTATION_CHECKLIST.md 검토
-   - [ ] CharacterCreatorBasic.tsx 생성
+1. **즉시 실행 (Today - Phase 0)**:
+   - [ ] docs/features/CODEXRK_IMPLEMENTATION_CHECKLIST.md 체크리스트 시작
+   - [ ] 기존 코드 백업 및 CharacterCreatorBasic.tsx 생성
    - [ ] codexrk/ 디렉토리 구조 생성
+   - [ ] Git 브랜치 생성: `feature/codexrk-integration`
 
-2. **단기 (1주일)**:
-   - [ ] CODEXRK Phase 1-2 완료 (기반 작업 + Core 구현)
-   - [ ] Professional API 엔드포인트 구현
-   - [ ] 어댑터 Mock 구현
+2. **단기 (Week 1 - Phase 1-2)**:
+   - [ ] A-00: 기존 코드 보호 완료
+   - [ ] A-01: 탭 UI 통합 구현
+   - [ ] A-02: Orchestrator API (Mock)
+   - [ ] A-03~A-06: 어댑터 Mock 구현
 
-3. **중기 (2주일)**:
-   - [ ] Image AI 통합
-   - [ ] Video AI 통합
-   - [ ] 전체 테스트
+3. **중기 (Week 2-3 - Phase 3)**:
+   - [ ] A-07: Consistency Engine 2.0
+   - [ ] A-08: UE5 Exporter
+   - [ ] A-09: Rights Management
+   - [ ] A-10: PostgreSQL + Telemetry
 
-4. **장기 (1개월)**:
-   - [ ] 성능 최적화
-   - [ ] 비용 최적화
-   - [ ] 프로덕션 배포
+4. **장기 (Week 4 - Phase 4)**:
+   - [ ] A-11: E2E 테스트 및 벤치마크
+   - [ ] A-12: 보안 및 비용 가드레일
+   - [ ] A-13: 문서 완성
+   - [ ] Go/No-Go 체크 및 프로덕션 배포
 
 ---
 

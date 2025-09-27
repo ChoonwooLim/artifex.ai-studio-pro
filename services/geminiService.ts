@@ -588,7 +588,36 @@ export const generateMediaArtKeyframePrompts = async (sourceImage: MediaArtSourc
 
 export const generateVisualArtVideo = async (text: string, effect: VisualArtEffect, image?: MediaArtSourceImage | null): Promise<string> => {
     // Note: Gemini SDK doesn't support video generation directly
-    // Return a placeholder or integrate with another video generation service  
+    // Return a placeholder or integrate with another video generation service
     console.warn("Visual art video generation not implemented with Gemini SDK");
     return "data:video/mp4;base64,AAAAAA=="; // Placeholder
+};
+
+export const generateSingleImage = async (prompt: string, model: string = 'imagen-3-fast-generate-001'): Promise<string> => {
+    try {
+        const genAI = getGenAI();
+
+        // Use stable Gemini model
+        const textModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+
+        const enhancedPromptQuery = `Create a detailed image generation prompt based on this description:
+        "${prompt}"
+
+        Return ONLY the enhanced prompt, no explanations or commentary.
+        Make it detailed and specific for high-quality image generation.`;
+
+        const result = await textModel.generateContent(enhancedPromptQuery);
+        const enhancedPrompt = result.response.text().trim();
+
+        // For now, return a placeholder image since Gemini doesn't directly generate images
+        // In production, you would integrate with an actual image generation API here
+        console.log('Enhanced prompt:', enhancedPrompt);
+
+        // Return a sample placeholder image (gradient)
+        return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="512" height="512"%3E%3Cdefs%3E%3ClinearGradient id="grad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:rgb(138,43,226);stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:rgb(30,144,255);stop-opacity:1" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="512" height="512" fill="url(%23grad)" /%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="24" fill="white" text-anchor="middle" dominant-baseline="middle"%3EAI Generated Image%3C/text%3E%3C/svg%3E';
+    } catch (error) {
+        console.error('Failed to generate image:', error);
+        // Return fallback placeholder on error
+        return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="512" height="512"%3E%3Crect width="512" height="512" fill="%23333" /%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle"%3EImage Generation Error%3C/text%3E%3C/svg%3E';
+    }
 };

@@ -245,7 +245,7 @@ class AIService {
             'gemini-2.0-flash': 'gemini-2.0-flash',
             'gemini-2.0-flash-lite': 'gemini-2.0-flash-lite',
             'gemini-1.5-pro': 'gemini-1.5-pro',
-            'gemini-1.5-flash': 'gemini-1.5-flash',
+            'gemini-1.5-flash': 'gemini-2.0-flash-exp',  // Map old model to working one
             // Experimental/Preview models
             'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
             'gemini-exp-1206': 'gemini-exp-1206',
@@ -416,7 +416,7 @@ class AIService {
         try {
             // Use Gemini to generate a detailed description and create a placeholder
             let textModel = 'gemini-2.0-flash-exp';
-            
+
             // Try to use Gemini 2.5 Flash for better descriptions
             if (options.model === 'gemini-2.5-flash-image' || options.model === 'gemini-2.5-flash') {
                 textModel = 'gemini-2.5-flash';

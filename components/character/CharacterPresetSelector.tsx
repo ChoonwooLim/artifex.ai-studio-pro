@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Sparkles, X, Check, ChevronRight, Search } from 'lucide-react';
 import { getPresetsByCategory, generatePromptFromPresets, PresetItem } from '../../data/characterPresets';
 import { useTranslation } from '../../i18n/LanguageContext';
@@ -62,7 +62,7 @@ export const CharacterPresetSelector: React.FC<CharacterPresetSelectorProps> = (
   const isKorean = language === 'Korean';
 
   const totalSelected = useMemo(
-    () => Object.values(selectedPresets).reduce((acc, items) => acc + items.length, 0),
+    () => Object.values(selectedPresets).reduce((acc: number, items: string[]) => acc + items.length, 0),
     [selectedPresets]
   );
 
@@ -84,17 +84,23 @@ export const CharacterPresetSelector: React.FC<CharacterPresetSelectorProps> = (
         } else {
           updated[category].push(itemId);
         }
-        onPresetSelect(updated);
         return updated;
       });
     },
-    [onPresetSelect]
+    []
   );
 
   const clearAllSelections = useCallback(() => {
     setSelectedPresets({});
-    onPresetSelect({});
-  }, [onPresetSelect]);
+  }, []);
+
+  // Call onPresetSelect when selectedPresets changes
+  useEffect(() => {
+    // Only call if there are actual changes
+    if (Object.keys(selectedPresets).length > 0) {
+      onPresetSelect(selectedPresets);
+    }
+  }, [selectedPresets]); // Remove onPresetSelect from dependencies to avoid infinite loops
 
   const filterItems = useCallback(
     (items: PresetItem[]) => {
@@ -123,9 +129,9 @@ export const CharacterPresetSelector: React.FC<CharacterPresetSelectorProps> = (
 
   const selectedChips = useMemo(() => {
     const chips: Array<{ id: string; label: string; category: CategoryKey }> = [];
-    Object.entries(selectedPresets).forEach(([category, ids]) => {
+    Object.entries(selectedPresets).forEach(([category, ids]: [string, string[]]) => {
       const categoryData = getPresetsByCategory(category);
-      ids.forEach(id => {
+      ids.forEach((id: string) => {
         const item = categoryData.items.find(i => i.id === id);
         if (item) {
           chips.push({
@@ -329,7 +335,7 @@ export const CharacterPresetSelector: React.FC<CharacterPresetSelectorProps> = (
             </div>
 
             <div className="space-y-3">
-              {Object.entries(selectedPresets).map(([categoryKey, itemIds]) => {
+              {Object.entries(selectedPresets).map(([categoryKey, itemIds]: [string, string[]]) => {
                 const categoryData = getPresetsByCategory(categoryKey);
                 return (
                   <div key={categoryKey} className="rounded-2xl bg-gray-800/80 p-4">

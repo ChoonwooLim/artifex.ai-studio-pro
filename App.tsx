@@ -156,6 +156,8 @@ const App: React.FC = () => {
         console.log('App mounted - Checking environment variables...');
         console.log('VITE_OPENAI_API_KEY exists:', !!import.meta.env.VITE_OPENAI_API_KEY);
         console.log('VITE_GOOGLE_API_KEY exists:', !!import.meta.env.VITE_GOOGLE_API_KEY);
+        console.log('VITE_GOOGLE_API_KEY length:', import.meta.env.VITE_GOOGLE_API_KEY?.length);
+        console.log('VITE_GOOGLE_API_KEY value (first 10 chars):', import.meta.env.VITE_GOOGLE_API_KEY?.substring(0, 10));
         console.log('VITE_ANTHROPIC_API_KEY exists:', !!import.meta.env.VITE_ANTHROPIC_API_KEY);
         console.log('All VITE_ env vars:', Object.keys(import.meta.env).filter(k => k.startsWith('VITE_')));
     }, []);
@@ -901,7 +903,9 @@ const App: React.FC = () => {
                                             openai: import.meta.env.VITE_OPENAI_API_KEY || '',
                                             google: import.meta.env.VITE_GOOGLE_API_KEY || '',
                                             anthropic: import.meta.env.VITE_ANTHROPIC_API_KEY || '',
+                                            mistral: import.meta.env.VITE_MISTRAL_API_KEY || '',
                                         }}
+                                        defaultImageModel={storyboardConfig.imageModel}
                                         onUpdateApiKey={(service, key) => {
                                             console.log('API Key update requested:', service, key);
                                         }}

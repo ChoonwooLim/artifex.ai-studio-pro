@@ -126,9 +126,18 @@ export class AICharacterGenerator {
   private geminiClient?: GoogleGenerativeAI;
 
   constructor(apiKeys: Record<string, string>) {
+    console.log('AICharacterGenerator constructor - received apiKeys:', Object.keys(apiKeys));
+    console.log('Google API key exists:', !!apiKeys.google);
+    console.log('Google API key length:', apiKeys.google?.length);
+
     this.apiKeys = new Map(Object.entries(apiKeys));
-    if (apiKeys.gemini) {
-      this.geminiClient = new GoogleGenerativeAI(apiKeys.gemini);
+    // Support both 'gemini' and 'google' as keys for Google AI
+    const googleApiKey = apiKeys.gemini || apiKeys.google;
+    if (googleApiKey && googleApiKey.trim() !== '') {
+      console.log('Initializing Gemini client with key of length:', googleApiKey.length);
+      this.geminiClient = new GoogleGenerativeAI(googleApiKey);
+    } else {
+      console.warn('No valid Google/Gemini API key provided');
     }
   }
 
@@ -200,7 +209,13 @@ export class AICharacterGenerator {
    */
   private async generateCharacterDNA(description: string): Promise<CharacterDNA> {
     if (!this.geminiClient) {
-      throw new Error('Gemini API key not provided');
+      // Try to initialize with Google key from apiKeys map as fallback
+      const googleKey = this.apiKeys.get('google') || this.apiKeys.get('gemini');
+      if (googleKey) {
+        this.geminiClient = new GoogleGenerativeAI(googleKey);
+      } else {
+        throw new Error('Gemini/Google API key not provided');
+      }
     }
 
     const model = this.geminiClient.getGenerativeModel({

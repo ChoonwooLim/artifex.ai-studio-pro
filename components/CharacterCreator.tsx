@@ -31,7 +31,7 @@ import { useTranslation } from '../i18n/LanguageContext';
 import CharacterManager from './character/CharacterManager';
 import CharacterPresetModal from './character/CharacterPresetModal';
 import { CHARACTER_PRESETS, generatePromptFromPresets } from '../data/characterPresets';
-import * as geminiService from '../services/geminiService';
+import { aiService } from '../services/aiService';
 import { AICharacterGenerator, Character2DGenerationOptions, Character3DGenerationOptions, DigitalHumanOptions } from '../services/characterGeneration/aiCharacterGenerator';
 import { GaussianSplattingRenderer } from '../services/characterGeneration/gaussianSplattingRenderer';
 
@@ -39,6 +39,7 @@ interface CharacterCreatorProps {
     onGenerateCharacterImage?: (character: Character) => Promise<string>;
     apiKeys: Record<string, string>;
     onUpdateApiKey?: (service: string, key: string) => void;
+    defaultImageModel?: string;
 }
 
 interface CharacterWithExtras extends Character {
@@ -65,10 +66,11 @@ interface CharacterWithExtras extends Character {
     blockchainTx?: string;
 }
 
-const CharacterCreator: React.FC<CharacterCreatorProps> = ({ 
+const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     onGenerateCharacterImage,
     apiKeys,
-    onUpdateApiKey
+    onUpdateApiKey,
+    defaultImageModel = 'dall-e-3'
 }) => {
     const { t } = useTranslation();
     const [characters, setCharacters] = useState<CharacterWithExtras[]>([]);
@@ -77,8 +79,14 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     const [presetModalState, setPresetModalState] = useState<{ isOpen: boolean; target: 'new' | 'existing' }>({ isOpen: false, target: 'new' });
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [generationType, setGenerationType] = useState<'fullbody' | 'headshot' | 'custom'>('fullbody');
-    const [customPrompt, setCustomPrompt] = useState('');
+    const [imageGenerationOptions, setImageGenerationOptions] = useState({
+        fullBodyReference: false,
+        headshot: false
+    });
+    const [aiGenerationEnabled, setAiGenerationEnabled] = useState({
+        generate3D: false,
+        generateDigitalHuman: false
+    });
     const [aiGenerator, setAiGenerator] = useState<AICharacterGenerator | null>(null);
     const [rendererContainer, setRendererContainer] = useState<HTMLDivElement | null>(null);
     const [gaussianRenderer, setGaussianRenderer] = useState<GaussianSplattingRenderer | null>(null);
@@ -187,10 +195,21 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
     }, [newCharacter, characters]);
 
     const handleUpdateCharacter = useCallback((character: CharacterWithExtras) => {
-        const updatedCharacters = characters.map(c => 
+        const updatedCharacters = characters.map(c =>
             c.id === character.id ? character : c
         );
         setCharacters(updatedCharacters);
+
+        // Save to localStorage
+        const savedCharacters = localStorage.getItem('characterCreatorData');
+        if (savedCharacters) {
+            const parsedData = JSON.parse(savedCharacters);
+            const updatedData = {
+                ...parsedData,
+                characters: updatedCharacters
+            };
+            localStorage.setItem('characterCreatorData', JSON.stringify(updatedData));
+        }
     }, [characters]);
 
     const handleDeleteCharacter = useCallback((id: string) => {
@@ -218,11 +237,11 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
 
             setGenerationProgress('Generating Character DNA...');
 
-            // Generate complete character with AI
+            // Generate complete character with AI - only include selected options
             const result = await aiGenerator.generateCharacterFromText(fullDescription, {
-                generate2D: generation2DOptions,
-                generate3D: generation3DOptions,
-                generateDigitalHuman: digitalHumanOptions.provider !== 'none' ? digitalHumanOptions : undefined,
+                generate2D: undefined, // Removed 2D generation from AI options
+                generate3D: aiGenerationEnabled.generate3D ? generation3DOptions : undefined,
+                generateDigitalHuman: aiGenerationEnabled.generateDigitalHuman && digitalHumanOptions.provider !== 'none' ? digitalHumanOptions : undefined,
                 registerOnBlockchain: false // Can be enabled via settings
             });
 
@@ -262,56 +281,193 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
         } finally {
             setIsGeneratingAI(false);
         }
-    }, [selectedCharacter, aiGenerator, generation2DOptions, generation3DOptions, digitalHumanOptions, gaussianRenderer, handleUpdateCharacter]);
+    }, [selectedCharacter, aiGenerator, generation2DOptions, generation3DOptions, digitalHumanOptions, gaussianRenderer, handleUpdateCharacter, aiGenerationEnabled, t]);
 
-    // Original image generation
-    const handleGenerateImage = useCallback(async (type: 'fullbody' | 'headshot' | 'custom') => {
+    // Unified generation for all selected options
+    const handleGenerateAll = useCallback(async () => {
         if (!selectedCharacter) return;
-        
+
+        // Check if any option is selected
+        const hasBasicOptions = imageGenerationOptions.fullBodyReference || imageGenerationOptions.headshot;
+        const hasAIOptions = aiGenerationEnabled.generate3D || aiGenerationEnabled.generateDigitalHuman;
+
+        if (!hasBasicOptions && !hasAIOptions) return;
+
+        // Set both loading states
+        if (hasBasicOptions) setIsGenerating(true);
+        if (hasAIOptions) setIsGeneratingAI(true);
+
+        try {
+            const updatedCharacter = { ...selectedCharacter };
+
+            // Generate basic images if selected
+            if (hasBasicOptions) {
+                const styleModifier = selectedCharacter.characterStyle === 'photorealistic'
+                    ? 'photorealistic, ultra realistic, 8k resolution'
+                    : selectedCharacter.characterStyle === 'animation'
+                    ? '3D animation style, pixar style, disney style'
+                    : selectedCharacter.characterStyle === 'anime'
+                    ? 'anime style, manga style, japanese animation'
+                    : selectedCharacter.characterStyle === 'concept-art'
+                    ? 'concept art, digital painting, artstation'
+                    : 'cinematic, movie still, film grain';
+
+                // Generate full body reference if selected
+                if (imageGenerationOptions.fullBodyReference) {
+                    const fullBodyPrompt = `Full body portrait, standing pose, complete view from head to toe, ${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}, professional lighting, neutral background, character reference sheet`;
+                    console.log(`Generating full body with model: ${generation2DOptions.model}`);
+                    const imageUrls = await aiService.generateImage({
+                        prompt: fullBodyPrompt,
+                        model: generation2DOptions.model,
+                        count: 1
+                    });
+                    updatedCharacter.fullBodyReference = imageUrls[0];
+                }
+
+                // Generate headshot if selected
+                if (imageGenerationOptions.headshot) {
+                    const headshotPrompt = `Portrait headshot, close-up face, ${selectedCharacter.physicalDescription}, ${styleModifier}, professional lighting, neutral background, character reference`;
+                    console.log(`Generating headshot with model: ${generation2DOptions.model}`);
+                    const imageUrls = await aiService.generateImage({
+                        prompt: headshotPrompt,
+                        model: generation2DOptions.model,
+                        count: 1
+                    });
+                    updatedCharacter.headShotReference = imageUrls[0];
+                }
+            }
+
+            // Generate AI-powered content if selected and generator is available
+            if (hasAIOptions && aiGenerator) {
+                setGenerationProgress('Initializing AI generation...');
+
+                const fullDescription = `
+                    ${selectedCharacter.name}: ${selectedCharacter.physicalDescription}.
+                    Clothing: ${selectedCharacter.clothingDescription}.
+                    Personality: ${selectedCharacter.personalityTraits}.
+                    Role: ${selectedCharacter.role} character.
+                `.trim();
+
+                setGenerationProgress('Generating Character DNA...');
+
+                const result = await aiGenerator.generateCharacterFromText(fullDescription, {
+                    generate2D: undefined, // Removed 2D generation from AI options
+                    generate3D: aiGenerationEnabled.generate3D ? generation3DOptions : undefined,
+                    generateDigitalHuman: aiGenerationEnabled.generateDigitalHuman && digitalHumanOptions.provider !== 'none' ? digitalHumanOptions : undefined,
+                    registerOnBlockchain: false
+                });
+
+                setGenerationProgress('Processing results...');
+
+                // Update character with AI-generated assets
+                if (result.characterDNA) updatedCharacter.characterDNA = result.characterDNA;
+                if (result.images2D?.url && !updatedCharacter.fullBodyReference) {
+                    updatedCharacter.fullBodyReference = result.images2D.url;
+                }
+                if (result.images2D?.variations) {
+                    updatedCharacter.generatedImages = result.images2D.variations;
+                }
+                if (result.model3D) {
+                    updatedCharacter.model3D = {
+                        url: result.model3D.url,
+                        format: result.model3D.format,
+                        preview: result.model3D.preview
+                    };
+                }
+                if (result.video) updatedCharacter.video = result.video;
+                if (result.digitalHuman) updatedCharacter.digitalHuman = result.digitalHuman;
+                if (result.characterDNA?.metadata?.blockchainTx) {
+                    updatedCharacter.blockchainTx = result.characterDNA.metadata.blockchainTx;
+                }
+
+                // Load 3D model in Gaussian renderer if available
+                if (result.model3D?.gaussianSplat && gaussianRenderer) {
+                    await gaussianRenderer.loadGaussianSplat(result.model3D.gaussianSplat.url, selectedCharacter.id);
+                } else if (result.model3D && gaussianRenderer) {
+                    await gaussianRenderer.loadModel(result.model3D.url, result.model3D.format as any);
+                }
+
+                setGenerationProgress(`✅ Generation complete!`);
+            }
+
+            // Update character once with all changes
+            handleUpdateCharacter(updatedCharacter);
+            setSelectedCharacter(updatedCharacter);
+
+        } catch (error) {
+            console.error('Failed to generate character assets:', error);
+            alert(t('characterCreator.generationFailed') + ': ' + (error as Error).message);
+        } finally {
+            setIsGenerating(false);
+            setIsGeneratingAI(false);
+            setGenerationProgress('');
+        }
+    }, [
+        selectedCharacter,
+        imageGenerationOptions,
+        aiGenerationEnabled,
+        apiKeys,
+        aiGenerator,
+        generation2DOptions,
+        generation3DOptions,
+        digitalHumanOptions,
+        gaussianRenderer,
+        handleUpdateCharacter,
+        t
+    ]);
+
+    // Batch image generation
+    const handleBatchImageGeneration = useCallback(async () => {
+        if (!selectedCharacter) return;
+        if (!imageGenerationOptions.fullBodyReference && !imageGenerationOptions.headshot) return;
+
         setIsGenerating(true);
         try {
-            let prompt = '';
-            const styleModifier = selectedCharacter.characterStyle === 'photorealistic' 
-                ? 'photorealistic, ultra realistic, 8k resolution' 
-                : selectedCharacter.characterStyle === 'animation' 
+            const styleModifier = selectedCharacter.characterStyle === 'photorealistic'
+                ? 'photorealistic, ultra realistic, 8k resolution'
+                : selectedCharacter.characterStyle === 'animation'
                 ? '3D animation style, pixar style, disney style'
                 : selectedCharacter.characterStyle === 'anime'
                 ? 'anime style, manga style, japanese animation'
                 : selectedCharacter.characterStyle === 'concept-art'
                 ? 'concept art, digital painting, artstation'
                 : 'cinematic, movie still, film grain';
-            
-            if (type === 'fullbody') {
-                prompt = `Full body portrait, standing pose, complete view from head to toe, ${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}, professional lighting, neutral background, character reference sheet`;
-            } else if (type === 'headshot') {
-                prompt = `Portrait headshot, close-up face, ${selectedCharacter.physicalDescription}, ${styleModifier}, professional lighting, neutral background, character reference`;
-            } else {
-                prompt = customPrompt || `${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}`;
-            }
-            
-            const imageUrl = await geminiService.generateSingleImage(
-                prompt,
-                'imagen-3-fast-generate-001'
-            );
-            
+
             const updatedCharacter = { ...selectedCharacter };
-            if (type === 'fullbody') {
-                updatedCharacter.fullBodyReference = imageUrl;
-            } else if (type === 'headshot') {
-                updatedCharacter.headShotReference = imageUrl;
-            } else {
-                updatedCharacter.generatedImages = [...(updatedCharacter.generatedImages || []), imageUrl];
+
+            // Generate full body reference if selected
+            if (imageGenerationOptions.fullBodyReference) {
+                const fullBodyPrompt = `Full body portrait, standing pose, complete view from head to toe, ${selectedCharacter.physicalDescription}, ${selectedCharacter.clothingDescription}, ${styleModifier}, professional lighting, neutral background, character reference sheet`;
+                console.log(`Batch generation - Full body with model: ${generation2DOptions.model}`);
+                const imageUrls = await aiService.generateImage({
+                    prompt: fullBodyPrompt,
+                    model: generation2DOptions.model,
+                    count: 1
+                });
+                updatedCharacter.fullBodyReference = imageUrls[0];
             }
-            
+
+            // Generate headshot if selected
+            if (imageGenerationOptions.headshot) {
+                const headshotPrompt = `Portrait headshot, close-up face, ${selectedCharacter.physicalDescription}, ${styleModifier}, professional lighting, neutral background, character reference`;
+                console.log(`Batch generation - Headshot with model: ${generation2DOptions.model}`);
+                const imageUrls = await aiService.generateImage({
+                    prompt: headshotPrompt,
+                    model: generation2DOptions.model,
+                    count: 1
+                });
+                updatedCharacter.headShotReference = imageUrls[0];
+            }
+
             handleUpdateCharacter(updatedCharacter);
             setSelectedCharacter(updatedCharacter);
         } catch (error) {
-            console.error('Failed to generate image:', error);
+            console.error('Failed to generate images:', error);
             alert(t('characterCreator.imageGenerationFailed') + ': ' + (error as Error).message);
         } finally {
             setIsGenerating(false);
         }
-    }, [selectedCharacter, customPrompt, apiKeys, handleUpdateCharacter]);
+    }, [selectedCharacter, imageGenerationOptions, generation2DOptions, apiKeys, handleUpdateCharacter, t]);
 
     // Export/Import
     const handleExportCharacter = useCallback(() => {
@@ -371,11 +527,11 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
         const physicalCategories = ['bodyType', 'faceShape', 'ageRange', 'hairStyle', 'specialFeatures'];
         const clothingCategories = ['clothingStyle', 'accessories'];
         const personalityCategories = ['personality'];
-        
+
         const physicalPrompts: string[] = [];
         const clothingPrompts: string[] = [];
         const personalityPrompts: string[] = [];
-        
+
         Object.entries(presets).forEach(([category, itemIds]) => {
             const categoryData = CHARACTER_PRESETS[category as keyof typeof CHARACTER_PRESETS];
             if (categoryData) {
@@ -393,42 +549,47 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                 });
             }
         });
-        
+
         if (target === 'new') {
             if (physicalPrompts.length > 0) {
-                setNewCharacter(prev => ({ 
-                    ...prev, 
-                    physicalDescription: physicalPrompts.join(', ') 
+                setNewCharacter(prev => ({
+                    ...prev,
+                    physicalDescription: physicalPrompts.join(', ')
                 }));
             }
             if (clothingPrompts.length > 0) {
-                setNewCharacter(prev => ({ 
-                    ...prev, 
-                    clothingDescription: clothingPrompts.join(', ') 
+                setNewCharacter(prev => ({
+                    ...prev,
+                    clothingDescription: clothingPrompts.join(', ')
                 }));
             }
             if (personalityPrompts.length > 0) {
-                setNewCharacter(prev => ({ 
-                    ...prev, 
-                    personalityTraits: personalityPrompts.join(', ') 
+                setNewCharacter(prev => ({
+                    ...prev,
+                    personalityTraits: personalityPrompts.join(', ')
                 }));
             }
-        } else if (target === 'existing' && selectedCharacter) {
-            const updatedCharacter = { ...selectedCharacter };
-            if (physicalPrompts.length > 0) {
-                updatedCharacter.physicalDescription = physicalPrompts.join(', ');
-            }
-            if (clothingPrompts.length > 0) {
-                updatedCharacter.clothingDescription = clothingPrompts.join(', ');
-            }
-            if (personalityPrompts.length > 0) {
-                updatedCharacter.personalityTraits = personalityPrompts.join(', ');
-            }
-            handleUpdateCharacter(updatedCharacter);
-            setSelectedCharacter(updatedCharacter);
+        } else if (target === 'existing') {
+            // Use setSelectedCharacter with callback to get latest state
+            setSelectedCharacter(current => {
+                if (!current) return current;
+                const updatedCharacter = { ...current };
+                if (physicalPrompts.length > 0) {
+                    updatedCharacter.physicalDescription = physicalPrompts.join(', ');
+                }
+                if (clothingPrompts.length > 0) {
+                    updatedCharacter.clothingDescription = clothingPrompts.join(', ');
+                }
+                if (personalityPrompts.length > 0) {
+                    updatedCharacter.personalityTraits = personalityPrompts.join(', ');
+                }
+                // Call handleUpdateCharacter outside of setState
+                setTimeout(() => handleUpdateCharacter(updatedCharacter), 0);
+                return updatedCharacter;
+            });
         }
-        
-    }, [selectedCharacter, handleUpdateCharacter]);
+
+    }, [handleUpdateCharacter]);
 
     return (
         <>
@@ -734,210 +895,201 @@ const CharacterCreator: React.FC<CharacterCreatorProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Image Generation Controls */}
-                                <div className="mb-6">
-                                    <h3 className="text-lg font-semibold text-white mb-4">{t('characterCreator.imageGeneration')}</h3>
-                                    
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                        <button
-                                            onClick={() => handleGenerateImage('fullbody')}
-                                            disabled={isGenerating}
-                                            className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 disabled:bg-gray-600 transition-colors flex items-center space-x-2"
-                                        >
-                                            <Camera className="w-4 h-4" />
-                                            <span>{t('characterCreator.fullBodyReference')}</span>
-                                        </button>
-                                        
-                                        <button
-                                            onClick={() => handleGenerateImage('headshot')}
-                                            disabled={isGenerating}
-                                            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 transition-colors flex items-center space-x-2"
-                                        >
-                                            <Camera className="w-4 h-4" />
-                                            <span>{t('characterCreator.headshot')}</span>
-                                        </button>
-                                        
-                                        <div className="flex-1 flex space-x-2">
-                                            <input
-                                                type="text"
-                                                value={customPrompt}
-                                                onChange={(e) => setCustomPrompt(e.target.value)}
-                                                placeholder={t('characterCreator.customPromptPlaceholder')}
-                                                className="flex-1 bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-purple-500 focus:outline-none"
-                                            />
-                                            <button
-                                                onClick={() => handleGenerateImage('custom')}
-                                                disabled={isGenerating || !customPrompt}
-                                                className="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-600 transition-colors"
-                                            >
-                                                {t('characterCreator.generate')}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {isGenerating && (
-                                        <div className="text-center py-4">
-                                            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-purple-400" />
-                                            <p className="text-gray-400 mt-2">{t('characterCreator.generatingImage')}</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* AI-Powered Generation (2025 High-End) */}
+                                {/* Unified Character Generation */}
                                 <div className="mb-6 p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30">
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
                                             <Zap className="w-5 h-5 text-yellow-400" />
-                                            <span>AI-Powered Generation (2025 Tech)</span>
+                                            <span>Character Generation Suite</span>
                                         </h3>
-                                        {generationProgress && (
-                                            <span className="text-sm text-green-400">{generationProgress}</span>
+                                        {(generationProgress || isGenerating) && (
+                                            <span className="text-sm text-green-400">
+                                                {generationProgress || 'Generating...'}
+                                            </span>
                                         )}
                                     </div>
 
-                                    {/* 2D Generation Options */}
+                                    {/* Basic Image Generation Options */}
+                                    {/* Model Selection for Basic References */}
                                     <div className="mb-4">
-                                        <h4 className="text-sm font-medium text-gray-300 mb-2">2D Image Generation</h4>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                                        <h4 className="text-sm font-semibold text-gray-300 mb-2">Image Generation Model</h4>
+                                        <div className="ml-4 mb-3">
                                             <select
                                                 value={generation2DOptions.model}
                                                 onChange={(e) => setGeneration2DOptions({...generation2DOptions, model: e.target.value as any})}
-                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                                className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm"
                                             >
-                                                <option value="midjourney-v7">Midjourney v7</option>
-                                                <option value="google-imagen-4">Google Imagen 4</option>
-                                                <option value="stable-diffusion-3.5">SD 3.5 Large</option>
-                                                <option value="dall-e-3">DALL-E 3</option>
+                                                <optgroup label="Premium Models">
+                                                    <option value="dall-e-3">DALL-E 3</option>
+                                                    <option value="midjourney-v7">Midjourney v7</option>
+                                                    <option value="google-imagen-4">Google Imagen 4</option>
+                                                </optgroup>
+                                                <optgroup label="Open Source">
+                                                    <option value="stable-diffusion-3.5">Stable Diffusion 3.5</option>
+                                                    <option value="flux-pro">Flux Pro</option>
+                                                </optgroup>
                                             </select>
-                                            <select
-                                                value={generation2DOptions.style}
-                                                onChange={(e) => setGeneration2DOptions({...generation2DOptions, style: e.target.value as any})}
-                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
-                                            >
-                                                <option value="photorealistic">Photorealistic</option>
-                                                <option value="cinematic">Cinematic</option>
-                                                <option value="anime">Anime</option>
-                                                <option value="pixar">Pixar Style</option>
-                                                <option value="concept-art">Concept Art</option>
-                                            </select>
-                                            <select
-                                                value={generation2DOptions.quality}
-                                                onChange={(e) => setGeneration2DOptions({...generation2DOptions, quality: e.target.value as any})}
-                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
-                                            >
-                                                <option value="draft">Draft</option>
-                                                <option value="standard">Standard</option>
-                                                <option value="high">High</option>
-                                                <option value="ultra">Ultra</option>
-                                            </select>
-                                            <label className="flex items-center space-x-1 text-sm text-gray-300">
+                                        </div>
+                                    </div>
+
+                                    {/* Basic Image Generation Options */}
+                                    <div className="mb-4">
+                                        <h4 className="text-sm font-semibold text-gray-300 mb-2">Character References</h4>
+                                        <div className="space-y-2 ml-4">
+                                            {/* Full Body Reference Checkbox */}
+                                            <label className="flex items-center space-x-3 text-white cursor-pointer">
                                                 <input
                                                     type="checkbox"
-                                                    checked={generation2DOptions.video}
-                                                    onChange={(e) => setGeneration2DOptions({...generation2DOptions, video: e.target.checked})}
-                                                    className="rounded"
+                                                    checked={imageGenerationOptions.fullBodyReference}
+                                                    onChange={(e) => setImageGenerationOptions({
+                                                        ...imageGenerationOptions,
+                                                        fullBodyReference: e.target.checked
+                                                    })}
+                                                    className="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 bg-gray-700"
                                                 />
-                                                <span>Video</span>
+                                                <Camera className="w-4 h-4 text-purple-400" />
+                                                <span>{t('characterCreator.fullBodyReference')}</span>
+                                            </label>
+
+                                            {/* Headshot Checkbox */}
+                                            <label className="flex items-center space-x-3 text-white cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={imageGenerationOptions.headshot}
+                                                    onChange={(e) => setImageGenerationOptions({
+                                                        ...imageGenerationOptions,
+                                                        headshot: e.target.checked
+                                                    })}
+                                                    className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 bg-gray-700"
+                                                />
+                                                <Camera className="w-4 h-4 text-blue-400" />
+                                                <span>{t('characterCreator.headshot')}</span>
                                             </label>
                                         </div>
                                     </div>
 
                                     {/* 3D Generation Options */}
                                     <div className="mb-4">
-                                        <h4 className="text-sm font-medium text-gray-300 mb-2">3D Model Generation</h4>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                                            <select
-                                                value={generation3DOptions.model}
-                                                onChange={(e) => setGeneration3DOptions({...generation3DOptions, model: e.target.value as any})}
-                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
-                                            >
-                                                <option value="csm-ai">CSM AI (Best)</option>
-                                                <option value="meshy-ai">Meshy AI</option>
-                                                <option value="luma-genie">Luma Genie</option>
-                                                <option value="stable-zero123">Stable Zero123</option>
-                                            </select>
-                                            <select
-                                                value={generation3DOptions.format}
-                                                onChange={(e) => setGeneration3DOptions({...generation3DOptions, format: e.target.value as any})}
-                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
-                                            >
-                                                <option value="glb">GLB</option>
-                                                <option value="fbx">FBX</option>
-                                                <option value="obj">OBJ</option>
-                                                <option value="usd">USD</option>
-                                                <option value="gaussian-splat">Gaussian Splat</option>
-                                            </select>
-                                            <select
-                                                value={generation3DOptions.textureResolution}
-                                                onChange={(e) => setGeneration3DOptions({...generation3DOptions, textureResolution: e.target.value as any})}
-                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
-                                            >
-                                                <option value="2k">2K</option>
-                                                <option value="4k">4K</option>
-                                                <option value="8k">8K</option>
-                                            </select>
-                                            <label className="flex items-center space-x-1 text-sm text-gray-300">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={generation3DOptions.rigging}
-                                                    onChange={(e) => setGeneration3DOptions({...generation3DOptions, rigging: e.target.checked})}
-                                                    className="rounded"
-                                                />
-                                                <span>Rigging</span>
-                                            </label>
-                                        </div>
+                                        <label className="flex items-center space-x-2 mb-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={aiGenerationEnabled.generate3D}
+                                                onChange={(e) => setAiGenerationEnabled({
+                                                    ...aiGenerationEnabled,
+                                                    generate3D: e.target.checked
+                                                })}
+                                                className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 bg-gray-700"
+                                            />
+                                            <h4 className="text-sm font-medium text-gray-300">3D Model Generation</h4>
+                                        </label>
+                                        {aiGenerationEnabled.generate3D && (
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2 ml-7">
+                                                <select
+                                                    value={generation3DOptions.model}
+                                                    onChange={(e) => setGeneration3DOptions({...generation3DOptions, model: e.target.value as any})}
+                                                    className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                                >
+                                                    <option value="csm-ai">CSM AI (Best)</option>
+                                                    <option value="meshy-ai">Meshy AI</option>
+                                                    <option value="luma-genie">Luma Genie</option>
+                                                    <option value="stable-zero123">Stable Zero123</option>
+                                                </select>
+                                                <select
+                                                    value={generation3DOptions.format}
+                                                    onChange={(e) => setGeneration3DOptions({...generation3DOptions, format: e.target.value as any})}
+                                                    className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                                >
+                                                    <option value="glb">GLB</option>
+                                                    <option value="fbx">FBX</option>
+                                                    <option value="obj">OBJ</option>
+                                                    <option value="usd">USD</option>
+                                                    <option value="gaussian-splat">Gaussian Splat</option>
+                                                </select>
+                                                <select
+                                                    value={generation3DOptions.textureResolution}
+                                                    onChange={(e) => setGeneration3DOptions({...generation3DOptions, textureResolution: e.target.value as any})}
+                                                    className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                                >
+                                                    <option value="2k">2K</option>
+                                                    <option value="4k">4K</option>
+                                                    <option value="8k">8K</option>
+                                                </select>
+                                                <label className="flex items-center space-x-1 text-sm text-gray-300">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={generation3DOptions.rigging}
+                                                        onChange={(e) => setGeneration3DOptions({...generation3DOptions, rigging: e.target.checked})}
+                                                        className="rounded"
+                                                    />
+                                                    <span>Rigging</span>
+                                                </label>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Digital Human Options */}
                                     <div className="mb-4">
-                                        <h4 className="text-sm font-medium text-gray-300 mb-2">Digital Human</h4>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
-                                            <select
-                                                value={digitalHumanOptions.provider}
-                                                onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, provider: e.target.value as any})}
-                                                className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
-                                            >
-                                                <option value="none">None</option>
-                                                <option value="did-agents-2">D-ID Agents 2.0</option>
-                                                <option value="heygen-avatar-3">HeyGen Avatar 3</option>
-                                                <option value="synthesia-personal">Synthesia Personal</option>
-                                            </select>
-                                            <label className="flex items-center space-x-1 text-sm text-gray-300">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={digitalHumanOptions.realTimeConversation}
-                                                    onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, realTimeConversation: e.target.checked})}
-                                                    className="rounded"
-                                                />
-                                                <span>Real-time</span>
-                                            </label>
-                                            <label className="flex items-center space-x-1 text-sm text-gray-300">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={digitalHumanOptions.lipSync}
-                                                    onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, lipSync: e.target.checked})}
-                                                    className="rounded"
-                                                />
-                                                <span>Lip Sync</span>
-                                            </label>
-                                        </div>
+                                        <label className="flex items-center space-x-2 mb-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={aiGenerationEnabled.generateDigitalHuman}
+                                                onChange={(e) => setAiGenerationEnabled({
+                                                    ...aiGenerationEnabled,
+                                                    generateDigitalHuman: e.target.checked
+                                                })}
+                                                className="w-5 h-5 rounded border-gray-600 text-green-600 focus:ring-green-500 focus:ring-offset-0 bg-gray-700"
+                                            />
+                                            <h4 className="text-sm font-medium text-gray-300">Digital Human</h4>
+                                        </label>
+                                        {aiGenerationEnabled.generateDigitalHuman && (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2 ml-7">
+                                                <select
+                                                    value={digitalHumanOptions.provider}
+                                                    onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, provider: e.target.value as any})}
+                                                    className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                                                >
+                                                    <option value="none">None</option>
+                                                    <option value="did-agents-2">D-ID Agents 2.0</option>
+                                                    <option value="heygen-avatar-3">HeyGen Avatar 3</option>
+                                                    <option value="synthesia-personal">Synthesia Personal</option>
+                                                </select>
+                                                <label className="flex items-center space-x-1 text-sm text-gray-300">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={digitalHumanOptions.realTimeConversation}
+                                                        onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, realTimeConversation: e.target.checked})}
+                                                        className="rounded"
+                                                    />
+                                                    <span>Real-time</span>
+                                                </label>
+                                                <label className="flex items-center space-x-1 text-sm text-gray-300">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={digitalHumanOptions.lipSync}
+                                                        onChange={(e) => setDigitalHumanOptions({...digitalHumanOptions, lipSync: e.target.checked})}
+                                                        className="rounded"
+                                                    />
+                                                    <span>Lip Sync</span>
+                                                </label>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Generation Button */}
+                                    {/* Unified Generation Button */}
                                     <button
-                                        onClick={handleGenerateAICharacter}
-                                        disabled={isGeneratingAI}
+                                        onClick={handleGenerateAll}
+                                        disabled={isGeneratingAI || isGenerating || (!imageGenerationOptions.fullBodyReference && !imageGenerationOptions.headshot && !aiGenerationEnabled.generate3D && !aiGenerationEnabled.generateDigitalHuman)}
                                         className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-600 transition-all flex items-center justify-center space-x-2 font-semibold"
                                     >
-                                        {isGeneratingAI ? (
+                                        {(isGeneratingAI || isGenerating) ? (
                                             <>
                                                 <RefreshCw className="w-5 h-5 animate-spin" />
-                                                <span>Generating AI Character...</span>
+                                                <span>Generating Character Assets...</span>
                                             </>
                                         ) : (
                                             <>
                                                 <Sparkles className="w-5 h-5" />
-                                                <span>Generate Complete AI Character</span>
+                                                <span>Generate Selected Options</span>
                                                 <Box className="w-5 h-5" />
                                             </>
                                         )}
