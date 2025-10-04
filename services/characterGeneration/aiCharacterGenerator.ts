@@ -230,27 +230,145 @@ export class AICharacterGenerator {
     const prompt = `Generate a comprehensive character DNA profile based on this description:
     "${description}"
 
-    Return a detailed JSON object with:
-    - Complete appearance details (age, gender, ethnicity, hair, eyes, build, etc.)
-    - Personality traits and mannerisms
-    - Clothing style and colors
-    - Backstory and relationships
-    - Unique distinguishing features
+    Return a JSON object with this EXACT structure:
+    {
+      "name": "character name",
+      "appearance": {
+        "age": "age as string (e.g., '25' or 'mid-twenties')",
+        "gender": "male/female/non-binary",
+        "ethnicity": "character ethnicity",
+        "hairStyle": "hair style description",
+        "hairColor": "hair color",
+        "eyeColor": "eye color",
+        "height": "height description (e.g., 'tall', '5'10')",
+        "build": "body build (e.g., 'athletic', 'slim')",
+        "distinguishingFeatures": ["array", "of", "unique", "features"]
+      },
+      "personality": {
+        "traits": ["array", "of", "personality", "traits"],
+        "voice": "voice description",
+        "mannerisms": ["array", "of", "behavioral", "quirks"]
+      },
+      "clothing": {
+        "style": "clothing style description",
+        "colors": ["array", "of", "main", "colors"],
+        "accessories": ["array", "of", "accessories"]
+      },
+      "lore": {
+        "backstory": "character backstory",
+        "occupation": "character job/role",
+        "skills": ["array", "of", "skills"],
+        "relationships": ["array", "of", "key", "relationships"]
+      }
+    }
 
     Make the character memorable and production-ready for games/films.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const characterData = JSON.parse(response.text());
 
-    return {
+    let characterData: any;
+    try {
+      characterData = JSON.parse(response.text());
+    } catch (parseError) {
+      console.error('Failed to parse Gemini response:', parseError);
+      console.log('Raw response:', response.text());
+      // Create a minimal valid structure if parsing fails
+      characterData = {
+        name: 'Generated Character',
+        appearance: {},
+        personality: {},
+        clothing: {},
+        lore: {}
+      };
+    }
+
+    // Ensure all required fields have proper defaults
+    const defaultAppearance = {
+      age: '25',
+      gender: 'neutral',
+      ethnicity: 'diverse',
+      hairStyle: 'medium length',
+      hairColor: 'brown',
+      eyeColor: 'brown',
+      height: 'average',
+      build: 'medium',
+      distinguishingFeatures: []
+    };
+
+    const defaultPersonality = {
+      traits: ['friendly', 'curious'],
+      voice: 'clear and confident',
+      mannerisms: ['gestures when speaking']
+    };
+
+    const defaultClothing = {
+      style: 'casual modern',
+      colors: ['neutral tones'],
+      accessories: []
+    };
+
+    const defaultLore = {
+      backstory: 'A character with an interesting past',
+      occupation: 'adventurer',
+      skills: ['adaptable'],
+      relationships: []
+    };
+
+    // Merge AI-generated data with defaults to ensure all fields exist
+    const finalAppearance = {
+      ...defaultAppearance,
+      ...(characterData.appearance || {})
+    };
+    // Ensure distinguishingFeatures is always an array
+    if (!Array.isArray(finalAppearance.distinguishingFeatures)) {
+      finalAppearance.distinguishingFeatures = [];
+    }
+
+    const finalPersonality = {
+      ...defaultPersonality,
+      ...(characterData.personality || {})
+    };
+    // Ensure arrays are properly formed
+    if (!Array.isArray(finalPersonality.traits)) {
+      finalPersonality.traits = defaultPersonality.traits;
+    }
+    if (!Array.isArray(finalPersonality.mannerisms)) {
+      finalPersonality.mannerisms = defaultPersonality.mannerisms;
+    }
+
+    const finalClothing = {
+      ...defaultClothing,
+      ...(characterData.clothing || {})
+    };
+    // Ensure arrays are properly formed
+    if (!Array.isArray(finalClothing.colors)) {
+      finalClothing.colors = defaultClothing.colors;
+    }
+    if (!Array.isArray(finalClothing.accessories)) {
+      finalClothing.accessories = defaultClothing.accessories;
+    }
+
+    const finalLore = {
+      ...defaultLore,
+      ...(characterData.lore || {})
+    };
+    // Ensure arrays are properly formed
+    if (!Array.isArray(finalLore.skills)) {
+      finalLore.skills = defaultLore.skills;
+    }
+    if (!Array.isArray(finalLore.relationships)) {
+      finalLore.relationships = defaultLore.relationships;
+    }
+
+    const characterDNA = {
       id: `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: characterData.name || 'Unnamed Character',
       description: description,
-      appearance: characterData.appearance,
-      personality: characterData.personality,
-      clothing: characterData.clothing,
-      lore: characterData.lore || {},
+      appearance: finalAppearance,
+      personality: finalPersonality,
+      clothing: finalClothing,
+      lore: finalLore,
       metadata: {
         createdAt: new Date().toISOString(),
         version: '3.0.0',
@@ -258,6 +376,9 @@ export class AICharacterGenerator {
         license: 'Creative Commons'
       }
     };
+
+    console.log('Generated CharacterDNA:', JSON.stringify(characterDNA, null, 2));
+    return characterDNA;
   }
 
   /**
@@ -853,14 +974,19 @@ export class AICharacterGenerator {
    * Build prompt for 3D model generation
    */
   private build3DDescription(characterDNA: CharacterDNA): string {
+    // Safety checks to ensure all properties exist
+    const appearance = characterDNA?.appearance || {};
+    const clothing = characterDNA?.clothing || {};
+    const features = appearance.distinguishingFeatures || [];
+
     return `
-      Create a 3D character model of ${characterDNA.name}:
-      - Age: ${characterDNA.appearance.age}
-      - Gender: ${characterDNA.appearance.gender}
-      - Build: ${characterDNA.appearance.build}
-      - Hair: ${characterDNA.appearance.hairStyle} in ${characterDNA.appearance.hairColor}
-      - Clothing: ${characterDNA.clothing.style}
-      - Distinguishing features: ${characterDNA.appearance.distinguishingFeatures.join(', ')}
+      Create a 3D character model of ${characterDNA?.name || 'Character'}:
+      - Age: ${appearance.age || 'young adult'}
+      - Gender: ${appearance.gender || 'neutral'}
+      - Build: ${appearance.build || 'average'}
+      - Hair: ${appearance.hairStyle || 'medium'} in ${appearance.hairColor || 'brown'}
+      - Clothing: ${clothing.style || 'casual'}
+      - Distinguishing features: ${features.length > 0 ? features.join(', ') : 'none specified'}
       The model should be game-ready with proper topology and PBR textures.
     `.trim();
   }
@@ -869,10 +995,13 @@ export class AICharacterGenerator {
    * Build prompt for video generation
    */
   private buildVideoPrompt(characterDNA: CharacterDNA): string {
+    const personality = characterDNA?.personality || {};
+    const mannerisms = personality.mannerisms || ['natural movement'];
+
     return `
-      ${characterDNA.name} character turntable animation,
+      ${characterDNA?.name || 'Character'} character turntable animation,
       showing full body rotation, facial expressions,
-      ${characterDNA.personality.mannerisms.join(', ')},
+      ${mannerisms.join(', ')},
       professional lighting, high quality render
     `.trim();
   }
