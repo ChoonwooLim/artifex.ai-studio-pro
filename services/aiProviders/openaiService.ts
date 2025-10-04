@@ -89,19 +89,21 @@ export class OpenAIService {
                         role: 'user',
                         content: options.prompt
                     }
-                ],
-                temperature: options.temperature || 0.7
+                ]
             };
 
-            // 모델에 따른 토큰 파라미터 설정
+            // 모델에 따른 설정
             if (isNewGenerationModel) {
-                // GPT-5 시리즈는 max_completion_tokens 사용
+                // GPT-5 시리즈는 temperature 1.0만 지원
+                // temperature 파라미터를 아예 포함하지 않으면 기본값 1.0 사용
+                // completionParams.temperature = 1.0; // 명시하지 않고 기본값 사용
                 completionParams.max_completion_tokens = options.maxTokens || 2000;
-                console.log(`Using max_completion_tokens for ${actualModel}: ${completionParams.max_completion_tokens}`);
+                console.log(`Using max_completion_tokens for ${actualModel}: ${completionParams.max_completion_tokens} (temperature: default 1.0)`);
             } else {
-                // 기존 모델은 max_tokens 사용
+                // 기존 모델은 temperature 설정 가능하고 max_tokens 사용
+                completionParams.temperature = options.temperature || 0.7;
                 completionParams.max_tokens = options.maxTokens || 2000;
-                console.log(`Using max_tokens for ${actualModel}: ${completionParams.max_tokens}`);
+                console.log(`Using max_tokens for ${actualModel}: ${completionParams.max_tokens}, temperature: ${completionParams.temperature}`);
             }
 
             const response = await this.client.chat.completions.create(completionParams);
